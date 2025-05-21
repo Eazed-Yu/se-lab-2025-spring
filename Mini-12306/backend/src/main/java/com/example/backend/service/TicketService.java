@@ -110,6 +110,7 @@ public class TicketService {
 
             Ticket newTicket = Ticket.builder()
                     .ticketId(ticketId)
+                    .userId(request.getUserId())
                     .orderId(orderId)
                     .scheduleId(request.getScheduleId())
                     .passengerName(request.getPassengerName())
@@ -228,6 +229,142 @@ public class TicketService {
         } else {
             throw new RuntimeException("退款处理失败，请稍后再试。");
         }
+    }
+
+    /**
+     * 获取用户的车票列表
+     * 
+     * @param userId 用户ID
+     * @return 用户车票列表
+     */
+    public List<TicketDTO> getUserTickets(String userId) {
+        return dataStore.tickets.values().stream()
+                .filter(ticket -> ticket.getUserId().equals(userId))
+                .filter(ticket -> !ticket.getTicketStatus().equals(Ticket.Status.REFUNDED.getDescription()))
+                .map(ticket -> {
+                    TrainSchedule schedule = dataStore.trainSchedules.get(ticket.getScheduleId());
+                    return TicketDTO.builder()
+                            .ticketId(ticket.getTicketId())
+                            .scheduleInfo(schedule != null ? schedule.toScheduleInfoDTO() : null)
+                            .passengerName(ticket.getPassengerName())
+                            .seatNumber(ticket.getSeatNumber())
+                            .seatType(ticket.getSeatType().getDescription())
+                            .pricePaid(ticket.getPricePaid())
+                            .ticketStatus(ticket.getTicketStatus())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 改签车票
+     * 
+     * @param changeRequest 改签请求
+     * @return 改签结果
+     */
+    public ChangeTicketResponseDTO changeTicket(ChangeTicketRequestDTO changeRequest) {
+        // 1. 查找原车票并验证
+        Ticket oldTicket = dataStore.tickets.get(changeRequest.getTicketId());
+        if (oldTicket == null) {
+            throw new IllegalArgumentException("车票信息未找到：" + changeRequest.getTicketId());
+        }
+        
+        if (!oldTicket.getUserId().equals(changeRequest.getUserId())) {
+            throw new RuntimeException("不符合改签条件：用户ID不匹配");
+        }
+        
+        if (oldTicket.getTicketStatus().equals(Ticket.Status.REFUNDED.getDescription())) {
+            throw new RuntimeException("不符合改签条件：车票已退票");
+        }
+        
+        // 2. 查找新车次信息
+        TrainSchedule newSchedule = dataStore.trainSchedules.get(changeRequest.getNewScheduleId());
+        if (newSchedule == null) {
+            throw new IllegalArgumentException("新车次信息未找到：" + changeRequest.getNewScheduleId());
+        }
+        
+        // 3. 验证新座位类型
+        SeatType newSeatType;
+        try {
+            newSeatType = SeatType.fromDescription(changeRequest.getSeatType());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("无效的座位类型：" + changeRequest.getSeatType());
+        }
+        
+        double newPrice = newSchedule.getPriceForSeat(newSeatType);
+        if (newPrice == 0.0) {
+            throw new IllegalArgumentException("该车次不提供座位类型：" + changeRequest.getSeatType());
+        }
+        
+        // 4. 检查新车次余票
+        int availableSeats = newSchedule.getAvailableSeats(newSeatType);
+        if (availableSeats <= 0) {
+            throw new RuntimeException("所选车次座位余票不足。");
+        }
+
+        // 5. 释放原始车票座位、锁定新座位并支付差价(如有)
+        TrainSchedule oldSchedule = dataStore.trainSchedules.get(oldTicket.getScheduleId());
+        oldSchedule.increaseSeatCount(oldTicket.getSeatType(), 1);
+        newSchedule.decreaseSeatCount(newSeatType, 1);
+        
+        double priceDiff = newPrice - oldTicket.getPricePaid();
+        boolean paymentSuccessful = true;
+        
+        if (priceDiff > 0) {
+            // 如果新票价高，需要支付差价
+            paymentSuccessful = paymentService.processPayment(changeRequest.getUserId(), priceDiff);
+            if (!paymentSuccessful) {
+                // 支付失败，恢复座位数量
+                oldSchedule.decreaseSeatCount(oldTicket.getSeatType(), 1);
+                newSchedule.increaseSeatCount(newSeatType, 1);
+                throw new RuntimeException("差价支付失败，订单已取消。");
+            }
+        } else if (priceDiff < 0) {
+            // 如果新票价低，退还差价
+            paymentService.processRefund(oldTicket.getTicketId(), Math.abs(priceDiff));
+        }
+        
+        // 6. 创建新车票
+        String newTicketId = dataStore.generateTicketId();
+        String seatNumber = assignSeat(newSchedule.getTrainNumber(), newSeatType.getDescription());
+        
+        Ticket newTicket = Ticket.builder()
+                .ticketId(newTicketId)
+                .userId(oldTicket.getUserId())
+                .orderId(oldTicket.getOrderId())
+                .scheduleId(newSchedule.getScheduleId())
+                .passengerName(oldTicket.getPassengerName())
+                .passengerIdCard(oldTicket.getPassengerIdCard())
+                .seatType(newSeatType)
+                .seatNumber(seatNumber)
+                .pricePaid(newPrice)
+                .ticketStatus(Ticket.Status.ISSUED.getDescription())
+                .build();
+        
+        dataStore.tickets.put(newTicketId, newTicket);
+        
+        // 7. 更新原车票状态
+        oldTicket.setTicketStatus(Ticket.Status.CHANGED.getDescription());
+        dataStore.tickets.put(oldTicket.getTicketId(), oldTicket);
+        
+        // 8. 构建并返回改签响应
+        TicketDTO newTicketDTO = TicketDTO.builder()
+                .ticketId(newTicket.getTicketId())
+                .scheduleInfo(newSchedule.toScheduleInfoDTO())
+                .passengerName(newTicket.getPassengerName())
+                .seatNumber(newTicket.getSeatNumber())
+                .seatType(newTicket.getSeatType().getDescription())
+                .pricePaid(newTicket.getPricePaid())
+                .ticketStatus(newTicket.getTicketStatus())
+                .build();
+        
+        return new ChangeTicketResponseDTO(
+                oldTicket.getTicketId(),
+                newTicket.getTicketId(),
+                "改签成功！" + (priceDiff > 0 ? "已支付差价：" + priceDiff + "元" : 
+                               priceDiff < 0 ? "已退还差价：" + Math.abs(priceDiff) + "元" : "无需支付差价"),
+                newTicketDTO
+        );
     }
 
     /**

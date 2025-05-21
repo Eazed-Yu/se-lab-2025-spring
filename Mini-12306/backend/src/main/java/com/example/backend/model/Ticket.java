@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Ticket {
     private String ticketId;
+    private String userId;  // 用户ID
     private String orderId;
     private String scheduleId;
     private String passengerName; // 乘车人姓名 [cite: 5]
@@ -28,6 +29,7 @@ public class Ticket {
         ISSUED("已出票"),
         CHECKED_IN("已检票"),
         REFUNDED("已退票"),
+        CHANGED("已改签"),
         REBOOKED("已改签"),
         CANCELLED("已取消");
 

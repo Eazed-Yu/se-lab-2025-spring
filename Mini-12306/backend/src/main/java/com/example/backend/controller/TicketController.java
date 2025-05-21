@@ -10,13 +10,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@CrossOrigin(origins = "*") // 允许所有来源的跨域请求
 @RequestMapping("/api") // 将 /api 移到类级别
 public class TicketController {
 
     @Autowired
     private TicketService ticketService;
 
-    // 将原有的 /api/tickets 改为 /tickets (因为 /api 已在类级别)
     @PostMapping("/tickets/buy")
     public ResponseEntity<?> buyTicket(@RequestBody PurchaseRequestDTO purchaseRequest) {
         try {
@@ -32,6 +32,7 @@ public class TicketController {
         }
     }
 
+    // 改签车票
     @PostMapping("/tickets/refund")
     public ResponseEntity<?> refundTicket(@RequestBody RefundRequestDTO refundRequest) {
         try {
@@ -47,7 +48,7 @@ public class TicketController {
         }
     }
 
-    // 新增查询车票的端点
+    // 查询车票的端点
     @GetMapping("/schedules/query")
     public ResponseEntity<?> querySchedules(
             @RequestParam(required = false) String departureStation,
@@ -55,15 +56,41 @@ public class TicketController {
             @RequestParam(required = false) String departureDate) {
         try {
             List<TrainScheduleDTO> schedules = ticketService.querySchedules(departureStation, arrivalStation, departureDate);
-            if (schedules.isEmpty()) {
-                return ResponseEntity.ok("未查询到符合条件的车次。"); // 或者返回空的列表 ResponseEntity.ok(schedules)
-            }
+            // 总是返回列表，即使为空
             return ResponseEntity.ok(schedules);
         } catch (IllegalArgumentException e) { // 主要用于捕获日期格式错误
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ErrorResponse("查询车次时发生错误：" + e.getMessage()));
+        }
+    }
+
+    // 查询用户车票的端点
+    @GetMapping("/tickets/user/{userId}")
+    public ResponseEntity<?> getUserTickets(@PathVariable String userId) {
+        try {
+            List<TicketDTO> tickets = ticketService.getUserTickets(userId);
+            return ResponseEntity.ok(tickets);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("查询用户车票时发生错误：" + e.getMessage()));
+        }
+    }
+
+    // 改签车票
+    @PostMapping("/tickets/change")
+    public ResponseEntity<?> changeTicket(@RequestBody ChangeTicketRequestDTO changeRequest) {
+        try {
+            ChangeTicketResponseDTO responseDTO = ticketService.changeTicket(changeRequest);
+            return ResponseEntity.ok(responseDTO);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(e.getMessage()));
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("不符合改签条件") || e.getMessage().contains("余票不足")) {
+                return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("改签过程中发生错误：" + e.getMessage()));
         }
     }
 
