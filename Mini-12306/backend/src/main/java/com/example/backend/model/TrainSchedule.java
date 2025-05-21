@@ -45,6 +45,11 @@ public class TrainSchedule {
         return this.basePrice.getOrDefault(seatType, 0.0);
     }
 
+    // Method to get available seats based on seat type
+    public int getAvailableSeats(SeatType seatType) {
+        return seatAvailability.getOrDefault(seatType, 0);
+    }
+
     // Inner DTO for cleaner representation in responses
     @Data
     @Builder
