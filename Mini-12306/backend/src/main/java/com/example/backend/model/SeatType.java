@@ -34,12 +34,5 @@ public enum SeatType {
         return basePrice;
     }
 
-    public static Enum<SeatType> SeatTypefromDescription(String description) {
-        for (SeatType type : SeatType.values()) {
-            if (type.getDescription().equals(description)) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Unknown seat type description: " + description);
-    }
+    // 移除冗余方法，使用上面的fromDescription方法即可
 }
