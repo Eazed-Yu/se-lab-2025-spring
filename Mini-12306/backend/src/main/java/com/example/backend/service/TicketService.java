@@ -97,10 +97,12 @@ public class TicketService {
             throw new RuntimeException("身份信息核验失败。");
         }
 
-        // 3. 检查余票并锁定车票 (原子操作)
+        // 3. 检查余票 (原子操作)
         // 在实际系统中，这里需要使用分布式锁或数据库事务
         synchronized (schedule) {
-            if (!schedule.decreaseSeatCount(requestedSeatType, 1)) {
+            // 只检查余票，还不锁定
+            int availableSeats = schedule.getAvailableSeats(requestedSeatType);
+            if (availableSeats <= 0) {
                 throw new RuntimeException("所选车次座位余票不足。");
             }
 
@@ -140,7 +142,21 @@ public class TicketService {
             boolean paymentSuccessful = paymentService.processPayment(orderId, newOrder.getTotalAmount());
 
             if (paymentSuccessful) {
-                // 6. 支付成功: 更新状态，生成票号等
+                // 6. 支付成功: 锁定座位，更新状态，生成票号等
+                // 再次检查并锁定座位
+                if (!schedule.decreaseSeatCount(requestedSeatType, 1)) {
+                    // 如果此时没有余票了，则退款并取消订单
+                    paymentService.processRefund(ticketId, price);
+                    newTicket.setTicketStatus(Ticket.Status.CANCELLED.getDescription());
+                    newOrder.setPaymentStatus("已退款"); 
+                    newOrder.setOrderStatus(Order.Status.CANCELLED.getDescription());
+                    
+                    // 更新数据存储
+                    dataStore.tickets.put(ticketId, newTicket);
+                    dataStore.orders.put(orderId, newOrder);
+                    throw new RuntimeException("支付成功，但座位已被抢占，款项将原路退回。");
+                }
+
                 newTicket.setTicketStatus(Ticket.Status.PAID.getDescription());
                 newTicket.setSeatNumber(assignSeat(schedule.getTrainNumber(), requestedSeatType.getDescription())); // 模拟座位分配
                 newOrder.setPaymentStatus(Order.PaymentStatus.SUCCESS.getDescription());
@@ -152,8 +168,7 @@ public class TicketService {
 
                 return convertToOrderDTO(newOrder, Collections.singletonList(newTicket), "购票成功");
             } else {
-                // 7. 支付失败: 回滚操作，释放车票
-                schedule.increaseSeatCount(requestedSeatType, 1); // 释放座位
+                // 7. 支付失败: 更新状态为取消
                 newTicket.setTicketStatus(Ticket.Status.CANCELLED.getDescription());
                 newOrder.setPaymentStatus(Order.PaymentStatus.FAILED.getDescription());
                 newOrder.setOrderStatus(Order.Status.CANCELLED.getDescription());
@@ -201,32 +216,49 @@ public class TicketService {
             throw new RuntimeException("当前车票状态不符合退票条件：" + ticket.getTicketStatus());
         }
 
-        // 2. （模拟）调用支付服务处理退款
+        // 修改退票流程顺序，先标记票为退票处理中，释放座位，然后尝试退款
+
+        // 1. 标记车票状态为退票处理中
+        String originalStatus = ticket.getTicketStatus(); // 备份原始状态，以便退款失败时恢复
+        ticket.setTicketStatus("退票处理中");
+        dataStore.tickets.put(ticket.getTicketId(), ticket);
+        
+        // 2. 释放座位资源
+        TrainSchedule schedule = dataStore.trainSchedules.get(ticket.getScheduleId());
+        if (schedule != null) {
+            schedule.increaseSeatCount(ticket.getSeatType(), 1);
+        }
+
+        // 3. 调用支付服务处理退款
         boolean refundProcessed = paymentService.processRefund(ticket.getTicketId(), ticket.getPricePaid());
 
         if (refundProcessed) {
-            // 3. 更新车票和订单状态，增加余票
+            // 4. 退款成功，更新车票和订单状态
             ticket.setTicketStatus(Ticket.Status.REFUNDED.getDescription());
             dataStore.tickets.put(ticket.getTicketId(), ticket);
 
             // 如果订单中所有车票都已退票，则更新订单状态
             // 简化处理：假设一个订单只有一张票，或者只有所有票都退了才改变订单状态
             boolean allTicketsInOrderRefunded = dataStore.findTicketsByOrderId(order.getOrderId()).stream()
-                    .allMatch(t -> t.getTicketStatus().equals(Ticket.Status.REFUNDED.getDescription()));
+                    .allMatch(t -> t.getTicketStatus().equals(Ticket.Status.REFUNDED.getDescription()) || 
+                               t.getTicketStatus().equals("退票处理中"));
             if(allTicketsInOrderRefunded) {
                 order.setOrderStatus(Order.Status.CANCELLED.getDescription());
                 order.setPaymentStatus("已退款");
                 dataStore.orders.put(order.getOrderId(), order);
             }
 
-            // 4. 释放座位资源
-            TrainSchedule schedule = dataStore.trainSchedules.get(ticket.getScheduleId());
-            if (schedule != null) {
-                schedule.increaseSeatCount(ticket.getSeatType(), 1);
-            }
-
             return new RefundResponseDTO(ticket.getTicketId(), "退票成功，款项将原路退回。", ticket.getTicketStatus());
         } else {
+            // 5. 退款失败，恢复车票状态和座位
+            ticket.setTicketStatus(originalStatus);
+            dataStore.tickets.put(ticket.getTicketId(), ticket);
+            
+            // 恢复座位
+            if (schedule != null) {
+                schedule.decreaseSeatCount(ticket.getSeatType(), 1);
+            }
+            
             throw new RuntimeException("退款处理失败，请稍后再试。");
         }
     }
@@ -302,11 +334,8 @@ public class TicketService {
             throw new RuntimeException("所选车次座位余票不足。");
         }
 
-        // 5. 释放原始车票座位、锁定新座位并支付差价(如有)
+        // 5. 处理差价支付，成功后再调整座位数量
         TrainSchedule oldSchedule = dataStore.trainSchedules.get(oldTicket.getScheduleId());
-        oldSchedule.increaseSeatCount(oldTicket.getSeatType(), 1);
-        newSchedule.decreaseSeatCount(newSeatType, 1);
-        
         double priceDiff = newPrice - oldTicket.getPricePaid();
         boolean paymentSuccessful = true;
         
@@ -314,13 +343,17 @@ public class TicketService {
             // 如果新票价高，需要支付差价
             paymentSuccessful = paymentService.processPayment(changeRequest.getUserId(), priceDiff);
             if (!paymentSuccessful) {
-                // 支付失败，恢复座位数量
-                oldSchedule.decreaseSeatCount(oldTicket.getSeatType(), 1);
-                newSchedule.increaseSeatCount(newSeatType, 1);
-                throw new RuntimeException("差价支付失败，订单已取消。");
+                // 支付失败，直接取消改签
+                throw new RuntimeException("差价支付失败，改签已取消。");
             }
-        } else if (priceDiff < 0) {
-            // 如果新票价低，退还差价
+        } 
+
+        // 支付成功或无需支付后，再执行座位调整
+        oldSchedule.increaseSeatCount(oldTicket.getSeatType(), 1);
+        newSchedule.decreaseSeatCount(newSeatType, 1);
+
+        // 如果新票价低，退还差价
+        if (priceDiff < 0) {
             paymentService.processRefund(oldTicket.getTicketId(), Math.abs(priceDiff));
         }
         

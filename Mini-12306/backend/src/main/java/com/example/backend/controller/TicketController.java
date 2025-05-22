@@ -32,7 +32,7 @@ public class TicketController {
         }
     }
 
-    // 改签车票
+    // 退票
     @PostMapping("/tickets/refund")
     public ResponseEntity<?> refundTicket(@RequestBody RefundRequestDTO refundRequest) {
         try {

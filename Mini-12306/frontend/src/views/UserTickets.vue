@@ -84,109 +84,253 @@
     </el-table>
     
     <!-- 改签对话框 -->
-    <el-dialog v-model="changeDialogVisible" title="车票改签" width="80%">
+    <el-dialog v-model="changeDialogVisible" title="车票改签" width="80%" class="modern-dialog">
       <div v-if="currentTicket" class="change-ticket-dialog">
-        <h3>原车票信息</h3>
-        <div class="original-ticket-info">
-          <p><strong>车次:</strong> {{ currentTicket.scheduleInfo?.trainNumber }}</p>
-          <p><strong>日期:</strong> {{ formatDate(currentTicket.scheduleInfo?.departureDateTime) }}</p>
-          <p><strong>区间:</strong> {{ currentTicket.scheduleInfo?.departureStation }} - {{ currentTicket.scheduleInfo?.arrivalStation }}</p>
-          <p><strong>时间:</strong> {{ formatTime(currentTicket.scheduleInfo?.departureDateTime) }} - {{ formatTime(currentTicket.scheduleInfo?.arrivalDateTime) }}</p>
-          <p><strong>座位类型:</strong> {{ currentTicket.seatType }}</p>
-          <p><strong>车票号:</strong> {{ currentTicket.ticketId }}</p>
-        </div>
+        <el-steps :active="activeStep" finish-status="success" simple class="change-steps">
+          <el-step title="选择出发日期" />
+          <el-step title="选择新车次和座位" />
+          <el-step title="确认改签信息" />
+        </el-steps>
         
-        <h3>选择新车次</h3>
-        <div class="search-form">
-          <el-form :model="changeForm" label-width="100px">
-            <el-form-item label="出发日期">
+        <!-- 第一步：原车票信息和选择出发日期 -->
+        <div v-if="activeStep === 0" class="step-container">
+          <el-card class="original-ticket-card">
+            <template #header>
+              <div class="card-header">
+                <span>原车票信息</span>
+                <el-tag size="small" type="info">{{ currentTicket.ticketId }}</el-tag>
+              </div>
+            </template>
+            <el-descriptions :column="3" border>
+              <el-descriptions-item label="车次">{{ currentTicket.scheduleInfo?.trainNumber }}</el-descriptions-item>
+              <el-descriptions-item label="乘客">{{ currentTicket.passengerName }}</el-descriptions-item>
+              <el-descriptions-item label="座位">{{ currentTicket.seatType }} / {{ currentTicket.seatNumber }}</el-descriptions-item>
+              <el-descriptions-item label="出发站">{{ currentTicket.scheduleInfo?.departureStation }}</el-descriptions-item>
+              <el-descriptions-item label="到达站">{{ currentTicket.scheduleInfo?.arrivalStation }}</el-descriptions-item>
+              <el-descriptions-item label="票价">{{ currentTicket.pricePaid }}元</el-descriptions-item>
+              <el-descriptions-item label="出发日期/时间" :span="3">
+                {{ formatDateTime(currentTicket.scheduleInfo?.departureDateTime) }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+          
+          <el-card class="date-selection-card">
+            <template #header>
+              <div class="card-header">
+                <span>选择新的出发日期</span>
+              </div>
+            </template>
+            <div class="date-selection">
               <el-date-picker
                 v-model="changeForm.departureDate"
                 type="date"
                 placeholder="选择日期"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
+                style="width: 100%"
+                :disabled-date="disablePastDates"
               />
-            </el-form-item>
-            <el-button type="primary" @click="searchNewSchedules">查询可改签车次</el-button>
-          </el-form>
+              <div class="date-selection-hint">
+                <el-alert type="info" :closable="false">
+                  <template #default>
+                    请选择您希望改签的新出发日期，系统将为您查询相同出发站和到达站的其他车次。
+                  </template>
+                </el-alert>
+              </div>
+            </div>
+          </el-card>
         </div>
         
-        <el-table 
-          v-if="alternativeSchedules.length > 0" 
-          :data="alternativeSchedules" 
-          style="width: 100%; margin-top: 20px;"
-          stripe
-          @row-click="selectNewSchedule"
-          :row-class-name="row => row.scheduleId === selectedSchedule?.scheduleId ? 'selected-row' : ''"
-        >
-          <el-table-column prop="trainNumber" label="车次" width="90" />
-          <el-table-column prop="departureStation" label="出发站" width="100" />
-          <el-table-column prop="arrivalStation" label="到达站" width="100" />
-          <el-table-column label="出发时间" width="180">
-            <template #default="scope">
-              {{ formatDateTime(scope.row.departureDateTime) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="到达时间" width="180">
-            <template #default="scope">
-              {{ formatDateTime(scope.row.arrivalDateTime) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="历时">
-            <template #default="scope">
-              {{ formatDuration(scope.row.durationMinutes) }}
-            </template>
-          </el-table-column>
-          <el-table-column label="可选座位" width="180">
-            <template #default="scope">
-              <el-select 
-                v-if="scope.row.scheduleId === selectedSchedule?.scheduleId"
-                v-model="changeForm.seatType" 
-                placeholder="选择座位类型"
-                style="width: 100%;"
+        <!-- 第二步：选择新车次和座位 -->
+        <div v-if="activeStep === 1" class="step-container">
+          <div class="step-header">
+            <h3>
+              可选车次 
+              <el-tag type="info" size="small">{{ currentTicket.scheduleInfo?.departureStation }} → {{ currentTicket.scheduleInfo?.arrivalStation }}</el-tag>
+              <el-tag type="info" size="small">{{ changeForm.departureDate }}</el-tag>
+            </h3>
+          </div>
+          
+          <div v-if="loading" class="loading-container">
+            <el-skeleton :rows="3" animated />
+          </div>
+          
+          <div v-else-if="alternativeSchedules.length === 0 && searchedAlternatives" class="no-schedules">
+            <el-empty description="未找到符合条件的可改签车次">
+              <template #extra>
+                <el-button type="primary" @click="activeStep = 0">返回选择其他日期</el-button>
+              </template>
+            </el-empty>
+          </div>
+          
+          <div v-else class="schedules-container">
+            <el-radio-group v-model="selectedScheduleId" class="schedule-radio-group">
+              <el-card 
+                v-for="schedule in alternativeSchedules" 
+                :key="schedule.scheduleId"
+                class="schedule-card"
+                :class="{ 'selected-schedule': schedule.scheduleId === selectedScheduleId }"
+                @click="selectSchedule(schedule)"
               >
-                <el-option
-                  v-for="(count, type) in scope.row.seatAvailability"
-                  :key="type"
-                  :label="`${type} (${count}张)`"
-                  :value="type"
-                  :disabled="count <= 0"
-                />
-              </el-select>
-              <div v-else>
-                <div v-for="(count, type) in scope.row.seatAvailability" :key="type">
-                  {{ type }}: {{ count }}张
+                <div class="schedule-card-header">
+                  <div class="train-number">{{ schedule.trainNumber }}</div>
+                  <div class="schedule-status">
+                    <el-tag :type="schedule.status === '正常' ? 'success' : 'warning'" size="small">{{ schedule.status }}</el-tag>
+                  </div>
+                </div>
+                
+                <div class="schedule-time-info">
+                  <div class="departure">
+                    <div class="time">{{ formatTime(schedule.departureDateTime) }}</div>
+                    <div class="station">{{ schedule.departureStation }}</div>
+                  </div>
+                  <div class="duration">
+                    <div class="duration-line"></div>
+                    <div class="duration-text">{{ formatDuration(schedule.durationMinutes) }}</div>
+                  </div>
+                  <div class="arrival">
+                    <div class="time">{{ formatTime(schedule.arrivalDateTime) }}</div>
+                    <div class="station">{{ schedule.arrivalStation }}</div>
+                  </div>
+                </div>
+                
+                <div class="schedule-price-seats">
+                  <div class="seat-types">
+                    <el-select 
+                      v-if="schedule.scheduleId === selectedScheduleId"
+                      v-model="changeForm.seatType" 
+                      placeholder="选择座位类型"
+                      style="width: 100%;"
+                    >
+                      <el-option
+                        v-for="(count, type) in schedule.seatAvailability"
+                        :key="type"
+                        :label="`${type} (${count}张) - ${schedule.basePrice[type]}元`"
+                        :value="type"
+                        :disabled="count <= 0"
+                      >
+                        <div class="seat-option">
+                          <span>{{ type }}</span>
+                          <span class="seat-count">{{ count }}张</span>
+                          <span class="seat-price">{{ schedule.basePrice[type] }}元</span>
+                        </div>
+                      </el-option>
+                    </el-select>
+                    <div v-else class="seat-summary">
+                      <div v-for="(count, type) in schedule.seatAvailability" :key="type" class="seat-type-item">
+                        <el-tag :type="count > 0 ? 'success' : 'info'" size="small">
+                          {{ type }}: {{ count > 0 ? `${count}张` : '无票' }}
+                        </el-tag>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </el-card>
+            </el-radio-group>
+          </div>
+        </div>
+        
+        <!-- 第三步：确认改签信息 -->
+        <div v-if="activeStep === 2" class="step-container">
+          <el-result icon="info" title="请确认改签信息">
+            <template #extra>
+              <div class="ticket-change-confirm">
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-card shadow="never" class="comparison-card">
+                      <template #header>
+                        <div class="card-header">
+                          <span>原车票</span>
+                          <el-tag size="small" type="info">{{ currentTicket.ticketId }}</el-tag>
+                        </div>
+                      </template>
+                      <el-descriptions :column="1" border>
+                        <el-descriptions-item label="车次">{{ currentTicket.scheduleInfo?.trainNumber }}</el-descriptions-item>
+                        <el-descriptions-item label="出发/到达">
+                          {{ currentTicket.scheduleInfo?.departureStation }} → {{ currentTicket.scheduleInfo?.arrivalStation }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="出发时间">
+                          {{ formatDateTime(currentTicket.scheduleInfo?.departureDateTime) }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="座位类型">{{ currentTicket.seatType }}</el-descriptions-item>
+                        <el-descriptions-item label="票价">{{ currentTicket.pricePaid }}元</el-descriptions-item>
+                      </el-descriptions>
+                    </el-card>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-card shadow="never" class="comparison-card">
+                      <template #header>
+                        <div class="card-header">
+                          <span>新车票</span>
+                          <el-tag size="small" type="success">待出票</el-tag>
+                        </div>
+                      </template>
+                      <el-descriptions :column="1" border>
+                        <el-descriptions-item label="车次">{{ selectedSchedule?.trainNumber }}</el-descriptions-item>
+                        <el-descriptions-item label="出发/到达">
+                          {{ selectedSchedule?.departureStation }} → {{ selectedSchedule?.arrivalStation }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="出发时间">
+                          {{ formatDateTime(selectedSchedule?.departureDateTime) }}
+                        </el-descriptions-item>
+                        <el-descriptions-item label="座位类型">{{ changeForm.seatType }}</el-descriptions-item>
+                        <el-descriptions-item label="预计票价">{{ getPriceForSelectedSeat() }}元</el-descriptions-item>
+                      </el-descriptions>
+                    </el-card>
+                  </el-col>
+                </el-row>
+                
+                <div class="price-difference" v-if="getPriceDifference() !== 0">
+                  <el-alert
+                    :title="`票价${getPriceDifference() > 0 ? '差额' : '退款'}: ${Math.abs(getPriceDifference())}元`"
+                    :type="getPriceDifference() > 0 ? 'warning' : 'success'"
+                    :description="getPriceDifference() > 0 ? '改签将需要补差价' : '改签后将退回差价'"
+                    show-icon
+                  />
+                </div>
+                
+                <div class="change-policy">
+                  <el-alert
+                    title="改签政策说明"
+                    type="info"
+                    :closable="false"
+                    description="1. 改签只能选择相同起始站和目的站的车次；2. 同一天内首次改签免收手续费，第二次起收取5%手续费；3. 不同日期改签可能会有票价差异；4. 改签成功后原车票将自动作废。"
+                    show-icon
+                  />
                 </div>
               </div>
             </template>
-          </el-table-column>
-          <el-table-column label="价格">
-            <template #default="scope">
-              <div v-for="(price, type) in scope.row.basePrice" :key="type">
-                {{ type }}: {{ price }}元
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-        
-        <div v-if="alternativeSchedules.length === 0 && searchedAlternatives" class="no-schedules">
-          未找到符合条件的可改签车次
+          </el-result>
         </div>
       </div>
       
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="changeDialogVisible = false">取消</el-button>
-          <el-button 
-            type="primary" 
-            :disabled="!selectedSchedule || !changeForm.seatType" 
-            @click="confirmChange"
-            :loading="changeSubmitting"
-          >
-            确认改签
-          </el-button>
-        </span>
+        <div class="dialog-footer">
+          <div>
+            <el-button @click="activeStep > 0 ? activeStep-- : changeDialogVisible = false">
+              {{ activeStep > 0 ? '上一步' : '取消' }}
+            </el-button>
+          </div>
+          <div>
+            <el-button 
+              v-if="activeStep < 2" 
+              type="primary" 
+              @click="handleNextStep"
+              :disabled="(activeStep === 0 && !changeForm.departureDate) || 
+                        (activeStep === 1 && (!selectedScheduleId || !changeForm.seatType))"
+            >
+              下一步
+            </el-button>
+            <el-button 
+              v-else 
+              type="primary" 
+              @click="confirmChange"
+              :loading="changeSubmitting"
+            >
+              确认改签
+            </el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
     
@@ -269,10 +413,12 @@ const changeDialogVisible = ref(false);
 const currentTicket = ref(null);
 const alternativeSchedules = ref([]);
 const selectedSchedule = ref(null);
+const selectedScheduleId = ref('');
 const searchedAlternatives = ref(false);
 const changeSubmitting = ref(false);
 const changeResultDialogVisible = ref(false);
 const changeResult = ref(null);
+const activeStep = ref(0);  // 步骤控制
 
 // 退票相关
 const refundResultDialogVisible = ref(false);
@@ -354,9 +500,25 @@ const showChangeDialog = (ticket) => {
   changeForm.departureDate = formatDate(ticket.scheduleInfo?.departureDateTime);
   changeForm.seatType = '';
   selectedSchedule.value = null;
+  selectedScheduleId.value = '';
   alternativeSchedules.value = [];
   changeDialogVisible.value = true;
   searchedAlternatives.value = false;
+  activeStep.value = 0;  // 重置步骤
+};
+
+// 处理步骤切换
+const handleNextStep = async () => {
+  if (activeStep.value === 0) {
+    // 从第一步到第二步：查询可改签车次
+    await searchNewSchedules();
+    if (alternativeSchedules.value.length > 0) {
+      activeStep.value = 1;
+    }
+  } else if (activeStep.value === 1 && selectedSchedule.value && changeForm.seatType) {
+    // 从第二步到第三步：确认信息
+    activeStep.value = 2;
+  }
 };
 
 // 查询可改签车次
@@ -367,6 +529,7 @@ const searchNewSchedules = async () => {
   }
   
   try {
+    loading.value = true;
     const searchParams = {
       departureStation: currentTicket.value.scheduleInfo.departureStation,
       arrivalStation: currentTicket.value.scheduleInfo.arrivalStation,
@@ -388,14 +551,35 @@ const searchNewSchedules = async () => {
     }
   } catch (error) {
     ElMessage.error(error.error || '查询车次失败');
+  } finally {
+    loading.value = false;
   }
 };
 
 // 选择新车次
-const selectNewSchedule = (row) => {
-  selectedSchedule.value = row;
-  changeForm.newScheduleId = row.scheduleId;
+const selectSchedule = (schedule) => {
+  selectedSchedule.value = schedule;
+  selectedScheduleId.value = schedule.scheduleId;
+  changeForm.newScheduleId = schedule.scheduleId;
   changeForm.seatType = '';
+};
+
+// 计算所选座位的价格
+const getPriceForSelectedSeat = () => {
+  if (!selectedSchedule.value || !changeForm.seatType) return 0;
+  return selectedSchedule.value.basePrice[changeForm.seatType] || 0;
+};
+
+// 计算价格差异
+const getPriceDifference = () => {
+  const newPrice = getPriceForSelectedSeat();
+  const oldPrice = currentTicket.value?.pricePaid || 0;
+  return newPrice - oldPrice;
+};
+
+// 禁用过去的日期
+const disablePastDates = (date) => {
+  return date < new Date(new Date().setHours(0, 0, 0, 0));
 };
 
 // 确认改签
@@ -514,5 +698,206 @@ const handleRefund = (ticket) => {
 
 :deep(.selected-row) {
   background-color: #ecf5ff;
+}
+
+/* 新添加的现代化样式 */
+.modern-dialog {
+  :deep(.el-dialog__body) {
+    padding: 20px 30px;
+  }
+}
+
+.change-steps {
+  margin-bottom: 30px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.step-container {
+  min-height: 300px;
+  margin-bottom: 20px;
+}
+
+.original-ticket-card, .date-selection-card {
+  margin-bottom: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.date-selection {
+  padding: 20px 0;
+}
+
+.date-selection-hint {
+  margin-top: 15px;
+}
+
+.loading-container {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.schedules-container {
+  margin-top: 20px;
+}
+
+.schedule-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.schedule-card {
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 0;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  }
+  
+  &.selected-schedule {
+    border-color: #409eff;
+    background-color: #ecf5ff;
+    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
+  }
+}
+
+.schedule-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.train-number {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.schedule-time-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.departure, .arrival {
+  text-align: center;
+  flex: 1;
+}
+
+.time {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.station {
+  color: #606266;
+}
+
+.duration {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 2;
+}
+
+.duration-line {
+  width: 100%;
+  height: 2px;
+  background-color: #dcdfe6;
+  position: relative;
+  
+  &:before, &:after {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #409eff;
+    top: -3px;
+  }
+  
+  &:before {
+    left: 0;
+  }
+  
+  &:after {
+    right: 0;
+  }
+}
+
+.duration-text {
+  margin-top: 10px;
+  color: #606266;
+  font-size: 12px;
+}
+
+.schedule-price-seats {
+  margin-top: 15px;
+}
+
+.seat-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.seat-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.seat-count {
+  color: #67c23a;
+}
+
+.seat-price {
+  font-weight: bold;
+}
+
+.step-header {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.comparison-card {
+  height: 100%;
+  
+  :deep(.el-descriptions__label) {
+    width: 100px;
+  }
+}
+
+.price-difference {
+  margin: 20px 0;
+}
+
+.change-policy {
+  margin-top: 20px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.ticket-change-confirm {
+  text-align: left;
+  margin: 20px 0;
 }
 </style>

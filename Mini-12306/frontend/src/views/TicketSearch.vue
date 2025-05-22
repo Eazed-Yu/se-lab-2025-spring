@@ -134,7 +134,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { api } from '../api';
 
@@ -222,6 +222,11 @@ const purchaseTicket = async () => {
     ElMessage.error(error.error || '购票失败');
   }
 };
+
+onMounted(() => {
+  // 进行一次默认查询
+  searchSchedules();
+});
 </script>
 
 <style scoped>
