@@ -1,12 +1,10 @@
 package com.example.backend.service;
 
 import org.springframework.stereotype.Service;
-import java.util.Random;
 
 @Service
 public class PaymentService {
 
-    private final Random random = new Random();
 
     /**
      * 模拟处理支付
@@ -22,8 +20,9 @@ public class PaymentService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        // 模拟支付成功/失败（约90%的成功率）
-        boolean success = random.nextInt(10) != 0; // 0表示失败
+   
+        boolean success = true;
+
         if (success) {
             System.out.println("模拟支付服务：订单 " + orderId + " 支付成功");
         } else {
