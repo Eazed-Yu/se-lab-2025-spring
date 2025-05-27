@@ -98,7 +98,6 @@ public class TicketService {
         }
 
         // 3. 检查余票 (原子操作)
-        // 在实际系统中，这里需要使用分布式锁或数据库事务
         synchronized (schedule) {
             // 只检查余票，还不锁定
             int availableSeats = schedule.getAvailableSeats(requestedSeatType);

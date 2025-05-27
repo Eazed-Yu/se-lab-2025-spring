@@ -17,6 +17,7 @@ public class TicketController {
     @Autowired
     private TicketService ticketService;
 
+    // 认证失败的测试ID（FAIL_ID_12345）
     @PostMapping("/tickets/buy")
     public ResponseEntity<?> buyTicket(@RequestBody PurchaseRequestDTO purchaseRequest) {
         try {
