@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "*") // 允许所有来源的跨域请求
-@RequestMapping("/api") // 将 /api 移到类级别
+@CrossOrigin(origins = "*")
+@RequestMapping("/api") 
 public class TicketController {
 
     @Autowired
@@ -49,7 +49,7 @@ public class TicketController {
         }
     }
 
-    // 查询车票的端点
+    // 查询车票
     @GetMapping("/schedules/query")
     public ResponseEntity<?> querySchedules(
             @RequestParam(required = false) String departureStation,
@@ -57,9 +57,8 @@ public class TicketController {
             @RequestParam(required = false) String departureDate) {
         try {
             List<TrainScheduleDTO> schedules = ticketService.querySchedules(departureStation, arrivalStation, departureDate);
-            // 总是返回列表，即使为空
             return ResponseEntity.ok(schedules);
-        } catch (IllegalArgumentException e) { // 主要用于捕获日期格式错误
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -67,7 +66,7 @@ public class TicketController {
         }
     }
 
-    // 查询用户车票的端点
+    // 查询用户车票
     @GetMapping("/tickets/user/{userId}")
     public ResponseEntity<?> getUserTickets(@PathVariable String userId) {
         try {

@@ -19,7 +19,7 @@ public class IdentityVerificationService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        // 演示用：除非使用特定的测试ID（FAIL_ID_12345），否则始终通过验证
+        // 使用特定的测试ID（FAIL_ID_12345），否则始终通过验证
         if ("FAIL_ID_12345".equals(idCardNumber)) {
             System.out.println("模拟身份认证服务：验证失败 for " + name);
             return false;

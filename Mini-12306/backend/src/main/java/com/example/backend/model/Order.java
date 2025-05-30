@@ -14,7 +14,7 @@ import java.util.List;
 public class Order {
     private String orderId;
     private String userId;
-    private List<String> ticketIds; // List of ticket IDs in this order
+    private List<String> ticketIds;
     private LocalDateTime orderCreationTime;
     private String orderType; // "购票", "退票", "改签" [cite: 5]
     private Double totalAmount;

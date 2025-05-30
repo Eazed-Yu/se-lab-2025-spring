@@ -39,19 +39,19 @@ public class TicketService {
         LocalDate departureDate = null;
         if (StringUtils.hasText(departureDateStr)) {
             try {
-                departureDate = LocalDate.parse(departureDateStr); // Format YYYY-MM-DD
+                departureDate = LocalDate.parse(departureDateStr);
             } catch (Exception e) {
                 throw new IllegalArgumentException("日期格式错误，请使用 YYYY-MM-DD 格式。");
             }
         }
 
-        final LocalDate finalDepartureDate = departureDate; // For use in lambda
+        final LocalDate finalDepartureDate = departureDate;
 
         return dataStore.trainSchedules.values().stream()
                 .filter(schedule -> !StringUtils.hasText(departureStation) || schedule.getDepartureStation().equalsIgnoreCase(departureStation))
                 .filter(schedule -> !StringUtils.hasText(arrivalStation) || schedule.getArrivalStation().equalsIgnoreCase(arrivalStation))
                 .filter(schedule -> finalDepartureDate == null || schedule.getDepartureDateTime().toLocalDate().equals(finalDepartureDate))
-                .map(TrainSchedule::toDetailedDTO) // 使用新的转换方法
+                .map(TrainSchedule::toDetailedDTO)
                 .collect(Collectors.toList());
     }
 
@@ -407,7 +407,6 @@ public class TicketService {
      * @return 格式化的座位号（如：01车08A座）
      */
     private String assignSeat(String trainNumber, String seatType) {
-        // 简化的座位分配逻辑，仅用于演示
         int carriage = (int) (Math.random() * 10) + 1;
         int seat = (int) (Math.random() * 50) + 1;
         char row = (char) ('A' + Math.random() * 5);

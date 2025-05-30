@@ -16,8 +16,8 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TrainSchedule {
-    private String scheduleId; // e.g., G1234_20250520
-    private String trainNumber; // e.g., G1234 [cite: 5]
+    private String scheduleId; // G1234_20250520
+    private String trainNumber; // G1234 [cite: 5]
     private String departureStation;
     private String arrivalStation;
     private LocalDateTime departureDateTime;

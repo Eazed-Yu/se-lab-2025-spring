@@ -505,10 +505,10 @@ public class MockDataStore {
         availability21.put(SeatType.FIRST_CLASS, 25);
         availability21.put(SeatType.SECOND_CLASS, 75);
         Map<SeatType, Double> prices21 = new ConcurrentHashMap<>();
-        prices21.put(SeatType.FIRST_CLASS, 790.0);  // 晚班价格稍有不同
+        prices21.put(SeatType.FIRST_CLASS, 790.0);
         prices21.put(SeatType.SECOND_CLASS, 540.0);
         String trainNumber21 = "G1238";
-        String scheduleId21 = generateScheduleId(trainNumber21, 1); // 明天
+        String scheduleId21 = generateScheduleId(trainNumber21, 1);
         TrainSchedule schedule21 = TrainSchedule.builder()
                 .scheduleId(scheduleId21)
                 .trainNumber(trainNumber21)
