@@ -21,8 +21,6 @@ public class TicketServiceUnitTest {
         request.setUserId(testUserId);
         request.setScheduleId("G1235_20250530");
         request.setSeatType("二等座");
-        request.setPassengerName("张三");
-        request.setPassengerIdCard("110101199001011234");
 
         // 购票
         OrderDTO result = ticketService.purchaseTicket(request);
@@ -60,8 +58,6 @@ public class TicketServiceUnitTest {
         request.setUserId(testUserId);
         request.setScheduleId("G1235_20250530");
         request.setSeatType("二等座");
-        request.setPassengerName("张三");
-        request.setPassengerIdCard("110101199001011234");
 
         // 购票
         OrderDTO result = ticketService.purchaseTicket(request);
@@ -97,8 +93,6 @@ public class TicketServiceUnitTest {
         request.setUserId(testUserId);
         request.setScheduleId("G1235_20250530");
         request.setSeatType("二等座");
-        request.setPassengerName("张三");
-        request.setPassengerIdCard("110101199001011234");
 
         // 购票
         OrderDTO result = ticketService.purchaseTicket(request);
@@ -134,8 +128,6 @@ public class TicketServiceUnitTest {
         request.setUserId(testUserId);
         request.setScheduleId("G1235_20250530");
         request.setSeatType("二等座");
-        request.setPassengerName("张三");
-        request.setPassengerIdCard("110101199001011234");
         // 购票
         OrderDTO result = ticketService.purchaseTicket(request);
         String originalTicketId = result.getTickets().get(0).getTicketId();

@@ -72,12 +72,16 @@
           />
         </el-form-item>
         
-        <el-form-item label="真实姓名" prop="realName">
-          <el-input v-model="registerForm.realName" placeholder="请输入真实姓名" />
+        <el-form-item label="乘车人姓名" prop="passengerName">
+          <el-input v-model="registerForm.passengerName" placeholder="请输入乘车人姓名" />
         </el-form-item>
         
-        <el-form-item label="身份证号" prop="idCard">
-          <el-input v-model="registerForm.idCard" placeholder="请输入身份证号" />
+        <el-form-item label="乘车人身份证" prop="passengerIdCard">
+          <el-input v-model="registerForm.passengerIdCard" placeholder="请输入乘车人身份证号" />
+        </el-form-item>
+        
+        <el-form-item label="乘车人手机号" prop="passengerPhone">
+          <el-input v-model="registerForm.passengerPhone" placeholder="请输入乘车人手机号" />
         </el-form-item>
         
         <el-form-item label="手机号" prop="phone">
@@ -125,8 +129,9 @@ const registerForm = reactive({
   username: '',
   password: '',
   confirmPassword: '',
-  realName: '',
-  idCard: '',
+  passengerName: '',
+  passengerIdCard: '',
+  passengerPhone: '',
   phone: '',
   email: ''
 });
@@ -165,12 +170,16 @@ const registerRules = {
       trigger: 'blur'
     }
   ],
-  realName: [
-    { required: true, message: '请输入真实姓名', trigger: 'blur' }
+  passengerName: [
+    { required: true, message: '请输入乘车人姓名', trigger: 'blur' }
   ],
-  idCard: [
-    { required: true, message: '请输入身份证号', trigger: 'blur' },
+  passengerIdCard: [
+    { required: true, message: '请输入乘车人身份证号', trigger: 'blur' },
     { pattern: /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/, message: '请输入正确的身份证号', trigger: 'blur' }
+  ],
+  passengerPhone: [
+    { required: true, message: '请输入乘车人手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },

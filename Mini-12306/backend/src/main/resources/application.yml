@@ -7,3 +7,9 @@ spring:
     username: ${MYSQL_USERNAME}
     password: ${MYSQL_PASSWORD}
     url:  ${MYSQL_URL}/mini12306
+
+app:
+  upload:
+    path: ${user.home}/mini12306/uploads
+    max-file-size: 5MB
+    allowed-types: jpg,jpeg,png,gif

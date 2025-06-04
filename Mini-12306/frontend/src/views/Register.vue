@@ -44,20 +44,31 @@
           />
         </el-form-item>
         
-        <el-form-item label="姓名" prop="realName">
+        <el-divider content-position="left">默认乘车人信息</el-divider>
+        
+        <el-form-item label="乘车人姓名" prop="passengerName">
           <el-input 
-            v-model="registerForm.realName" 
-            placeholder="请输入真实姓名" 
+            v-model="registerForm.passengerName" 
+            placeholder="请输入乘车人姓名" 
             prefix-icon="User"
             clearable
           />
         </el-form-item>
         
-        <el-form-item label="身份证号" prop="idCard">
+        <el-form-item label="乘车人身份证" prop="passengerIdCard">
           <el-input 
-            v-model="registerForm.idCard" 
-            placeholder="请输入身份证号" 
+            v-model="registerForm.passengerIdCard" 
+            placeholder="请输入乘车人身份证号" 
             prefix-icon="Document"
+            clearable
+          />
+        </el-form-item>
+        
+        <el-form-item label="乘车人手机" prop="passengerPhone">
+          <el-input 
+            v-model="registerForm.passengerPhone" 
+            placeholder="请输入乘车人手机号" 
+            prefix-icon="Phone"
             clearable
           />
         </el-form-item>
@@ -122,8 +133,9 @@ const registerForm = reactive({
   username: '',
   password: '',
   confirmPassword: '',
-  realName: '', // 修改为realName以匹配后端API
-  idCard: '',
+  passengerName: '', // 默认乘车人姓名
+  passengerIdCard: '', // 默认乘车人身份证
+  passengerPhone: '', // 默认乘车人手机号
   phone: '',
   email: ''
 });
@@ -153,9 +165,7 @@ const validateConfirmPass = (rule, value, callback) => {
 };
 
 const validateIdCard = (rule, value, callback) => {
-  if (value === '') {
-    callback(new Error('请输入身份证号'));
-  } else if (!/^\d{17}[\dXx]$/.test(value)) {
+  if (value && !/^\d{17}[\dXx]$/.test(value)) {
     callback(new Error('请输入正确的18位身份证号'));
   } else {
     callback();
@@ -182,6 +192,15 @@ const validateEmail = (rule, value, callback) => {
   }
 };
 
+// 乘车人手机号验证（可以为空）
+const validatePassengerPhone = (rule, value, callback) => {
+  if (value && !/^1[3-9]\d{9}$/.test(value)) {
+    callback(new Error('请输入正确的手机号'));
+  } else {
+    callback();
+  }
+};
+
 const registerRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
@@ -193,12 +212,16 @@ const registerRules = {
   confirmPassword: [
     { validator: validateConfirmPass, trigger: 'blur' }
   ],
-  realName: [
-    { required: true, message: '请输入真实姓名', trigger: 'blur' },
+  passengerName: [
+    { required: true, message: '请输入乘车人姓名', trigger: 'blur' },
     { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
   ],
-  idCard: [
+  passengerIdCard: [
+    { required: true, message: '请输入乘车人身份证号', trigger: 'blur' },
     { validator: validateIdCard, trigger: 'blur' }
+  ],
+  passengerPhone: [
+    { validator: validatePassengerPhone, trigger: 'blur' }
   ],
   phone: [
     { validator: validatePhone, trigger: 'blur' }

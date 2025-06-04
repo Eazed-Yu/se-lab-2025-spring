@@ -1,9 +1,11 @@
 package com.example.backend.util;
 
 import com.example.backend.dto.OrderDTO;
+import com.example.backend.dto.PassengerDTO;
 import com.example.backend.dto.TicketDTO;
 import com.example.backend.dto.TrainScheduleDTO;
 import com.example.backend.model.*;
+import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -14,6 +16,7 @@ import java.util.stream.Collectors;
 /**
  * 实体类与DTO之间的转换工具类
  */
+@Component
 public class EntityConverter {
 
     /**
@@ -69,13 +72,13 @@ public class EntityConverter {
     }
     
     /**
-     * 将TicketEntity转换为TicketDTO
+     * 将TicketEntity、TrainScheduleEntity和SeatTypeEntity转换为TicketDTO
      */
-    public static TicketDTO toTicketDTO(TicketEntity ticket, TrainScheduleEntity schedule, SeatTypeEntity seatType) {
+    public static TicketDTO toTicketDTO(TicketEntity ticket, TrainScheduleEntity schedule, SeatTypeEntity seatType, String passengerName) {
         return TicketDTO.builder()
                 .ticketId(ticket.getId())
                 .scheduleInfo(toScheduleInfoDTO(schedule))
-                .passengerName(ticket.getPassengerName())
+                .passengerName(passengerName)
                 .seatNumber(ticket.getSeatNumber())
                 .seatType(seatType.getName())
                 .pricePaid(ticket.getPricePaid().doubleValue())
@@ -94,5 +97,27 @@ public class EntityConverter {
                 .totalAmount(order.getTotalAmount().doubleValue())
                 .message(message)
                 .build();
+    }
+    
+    /**
+     * 将PassengerEntity转换为PassengerDTO
+     */
+    public PassengerDTO convertToPassengerDTO(PassengerEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        
+        PassengerDTO dto = new PassengerDTO();
+        dto.setId(entity.getId());
+        dto.setUserId(entity.getUserId());
+        dto.setName(entity.getName());
+        dto.setIdCard(entity.getIdCard());
+        dto.setPhone(entity.getPhone());
+        dto.setIdCardPhotoPath(entity.getIdCardPhotoPath());
+        dto.setIsDefault(entity.getIsDefault());
+        dto.setCreateTime(entity.getCreateTime());
+        dto.setUpdateTime(entity.getUpdateTime());
+        
+        return dto;
     }
 }

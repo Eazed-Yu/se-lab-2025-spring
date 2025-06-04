@@ -3,6 +3,7 @@ import TicketSearch from '../views/TicketSearch.vue';
 import UserTickets from '../views/UserTickets.vue';
 import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
+import PassengerManagement from '../views/PassengerManagement.vue';
 
 const routes = [
   {
@@ -31,6 +32,12 @@ const routes = [
     path: '/tickets/user',
     name: 'UserTickets',
     component: UserTickets,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/passengers',
+    name: 'PassengerManagement',
+    component: PassengerManagement,
     meta: { requiresAuth: true }
   }
 ];

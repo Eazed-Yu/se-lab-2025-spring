@@ -21,8 +21,7 @@ public class TicketEntity {
     private String userId;
     private String orderId;
     private String scheduleId;
-    private String passengerName;
-    private String passengerIdCard;
+    private String passengerId;
     private Integer seatTypeId;
     private String carriageNumber;
     private String seatNumber;

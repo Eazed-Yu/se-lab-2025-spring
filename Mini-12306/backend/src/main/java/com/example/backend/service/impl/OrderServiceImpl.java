@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.backend.dto.OrderDTO;
 import com.example.backend.dto.TicketDTO;
 import com.example.backend.mapper.OrderMapper;
+import com.example.backend.mapper.PassengerMapper;
 import com.example.backend.mapper.SeatTypeMapper;
 import com.example.backend.mapper.TicketMapper;
 import com.example.backend.mapper.TrainScheduleMapper;
 import com.example.backend.model.OrderEntity;
+import com.example.backend.model.PassengerEntity;
 import com.example.backend.model.SeatTypeEntity;
 import com.example.backend.model.TicketEntity;
 import com.example.backend.model.TrainScheduleEntity;
@@ -40,6 +42,9 @@ public class OrderServiceImpl implements OrderService {
     
     @Autowired
     private SeatTypeMapper seatTypeMapper;
+    
+    @Autowired
+    private PassengerMapper passengerMapper;
 
     /**
      * 根据订单ID查询订单
@@ -80,12 +85,21 @@ public class OrderServiceImpl implements OrderService {
         Map<Integer, SeatTypeEntity> seatTypeMap = seatTypes.stream()
                 .collect(Collectors.toMap(SeatTypeEntity::getId, seatType -> seatType));
         
+        // 获取所有相关的乘车人信息
+        List<String> passengerIds = tickets.stream()
+                .map(TicketEntity::getPassengerId)
+                .collect(Collectors.toList());
+        List<PassengerEntity> passengers = passengerMapper.selectBatchIds(passengerIds);
+        Map<String, PassengerEntity> passengerMap = passengers.stream()
+                .collect(Collectors.toMap(PassengerEntity::getId, passenger -> passenger));
+        
         // 转换为DTO
         List<TicketDTO> ticketDTOs = tickets.stream()
                 .map(ticket -> {
                     TrainScheduleEntity schedule = scheduleMap.get(ticket.getScheduleId());
                     SeatTypeEntity seatType = seatTypeMap.get(ticket.getSeatTypeId());
-                    return EntityConverter.toTicketDTO(ticket, schedule, seatType);
+                    PassengerEntity passenger = passengerMap.get(ticket.getPassengerId());
+                    return EntityConverter.toTicketDTO(ticket, schedule, seatType, passenger != null ? passenger.getName() : "未知乘车人");
                 })
                 .collect(Collectors.toList());
         
@@ -143,6 +157,14 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toMap(SeatTypeEntity::getId, seatType -> seatType));
         
         // 转换为DTO
+        // 获取所有相关的乘车人信息
+        List<String> allPassengerIds = tickets.stream()
+                .map(TicketEntity::getPassengerId)
+                .collect(Collectors.toList());
+        List<PassengerEntity> allPassengers = passengerMapper.selectBatchIds(allPassengerIds);
+        Map<String, PassengerEntity> allPassengerMap = allPassengers.stream()
+                .collect(Collectors.toMap(PassengerEntity::getId, passenger -> passenger));
+        
         return orders.stream()
                 .map(order -> {
                     List<TicketEntity> orderTickets = ticketMap.getOrDefault(order.getId(), new ArrayList<>());
@@ -150,7 +172,8 @@ public class OrderServiceImpl implements OrderService {
                             .map(ticket -> {
                                 TrainScheduleEntity schedule = scheduleMap.get(ticket.getScheduleId());
                                 SeatTypeEntity seatType = seatTypeMap.get(ticket.getSeatTypeId());
-                                return EntityConverter.toTicketDTO(ticket, schedule, seatType);
+                                PassengerEntity passenger = allPassengerMap.get(ticket.getPassengerId());
+                                return EntityConverter.toTicketDTO(ticket, schedule, seatType, passenger != null ? passenger.getName() : "未知乘车人");
                             })
                             .collect(Collectors.toList());
                     

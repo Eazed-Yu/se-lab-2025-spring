@@ -110,11 +110,63 @@ export const orderApi = {
   }
 };
 
+// 乘车人相关API
+export const passengerApi = {
+  // 获取用户乘车人列表
+  getPassengerList: (userId) => {
+    return axiosInstance.get('/passengers', { params: { userId } });
+  },
+  
+  // 添加乘车人
+  addPassenger: (passengerData) => {
+    return axiosInstance.post('/passengers', passengerData, {
+      params: { userId: passengerData.userId }
+    });
+  },
+  
+  // 根据ID获取乘车人
+  getPassengerById: (passengerId) => {
+    return axiosInstance.get(`/passengers/${passengerId}`);
+  },
+  
+  // 更新乘车人信息
+  updatePassenger: (passengerId, passengerData) => {
+    return axiosInstance.put(`/passengers/${passengerId}`, passengerData);
+  },
+  
+  // 删除乘车人
+  deletePassenger: (passengerId) => {
+    return axiosInstance.delete(`/passengers/${passengerId}`);
+  },
+  
+  // 设置默认乘车人
+  setDefaultPassenger: (userId, passengerId) => {
+    return axiosInstance.put(`/passengers/${passengerId}/default`, null, {
+      params: { userId }
+    });
+  },
+  
+  // 获取默认乘车人
+  getDefaultPassenger: (userId) => {
+    return axiosInstance.get('/passengers/default', { params: { userId } });
+  },
+  
+  // 上传身份证照片
+  uploadIdCardPhoto: (passengerId, formData) => {
+    return axiosInstance.post(`/passengers/${passengerId}/id-card-photo`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  }
+};
+
 // 导出所有API
 export const api = {
   ...userApi,
   ...ticketApi,
-  ...orderApi
+  ...orderApi,
+  ...passengerApi
 };
 
 export default api;

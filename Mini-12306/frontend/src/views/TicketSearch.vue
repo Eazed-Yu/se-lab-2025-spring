@@ -140,11 +140,25 @@
           <el-form-item prop="userId" style="display: none;">
             <el-input v-model="purchaseForm.userId" type="hidden" />
           </el-form-item>
-          <el-form-item label="乘客姓名" prop="passengerName">
-            <el-input v-model="purchaseForm.passengerName" placeholder="请输入乘客姓名" />
-          </el-form-item>
-          <el-form-item label="乘客身份证号" prop="passengerIdCard">
-            <el-input v-model="purchaseForm.passengerIdCard" placeholder="请输入身份证号" />
+          <el-form-item label="选择乘车人" prop="passengerId">
+            <el-select 
+              v-model="purchaseForm.passengerId" 
+              placeholder="请选择乘车人" 
+              style="width: 100%"
+              @change="onPassengerChange"
+            >
+              <el-option
+                v-for="passenger in passengerList"
+                :key="passenger.id"
+                :label="`${passenger.name} (${passenger.idCard})`"
+                :value="passenger.id"
+              />
+            </el-select>
+            <div style="margin-top: 8px;">
+              <el-button type="text" size="small" @click="goToPassengerManagement">
+                管理乘车人
+              </el-button>
+            </div>
           </el-form-item>
           <el-form-item label="座位类型" prop="seatType">
             <el-select v-model="purchaseForm.seatType" placeholder="请选择座位类型" style="width: 100%">
@@ -228,7 +242,10 @@
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Search, Ticket } from '@element-plus/icons-vue';
-import { ticketApi } from '../api';
+import { useRouter } from 'vue-router';
+import { ticketApi, passengerApi } from '../api';
+
+const router = useRouter();
 
 // 站点列表
 const stationList = [
@@ -246,6 +263,7 @@ const orderSuccessDialogVisible = ref(false);
 const selectedSchedule = ref(null);
 const currentOrder = ref(null);
 const purchaseFormRef = ref(null);
+const passengerList = ref([]);
 
 // 查询表单数据
 const searchForm = reactive({
@@ -258,8 +276,7 @@ const searchForm = reactive({
 const purchaseForm = reactive({
   userId: localStorage.getItem('userId') || '',
   scheduleId: '',
-  passengerName: '',
-  passengerIdCard: '',
+  passengerId: '',
   seatType: ''
 });
 
@@ -268,12 +285,8 @@ const purchaseRules = {
   userId: [
     { required: true, message: '请输入用户ID', trigger: 'blur' }
   ],
-  passengerName: [
-    { required: true, message: '请输入乘客姓名', trigger: 'blur' }
-  ],
-  passengerIdCard: [
-    { required: true, message: '请输入身份证号', trigger: 'blur' },
-    { pattern: /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/, message: '请输入正确的身份证号', trigger: 'blur' }
+  passengerId: [
+    { required: true, message: '请选择乘车人', trigger: 'change' }
   ],
   seatType: [
     { required: true, message: '请选择座位类型', trigger: 'change' }
@@ -352,11 +365,11 @@ const searchSchedules = async () => {
 };
 
 // 显示购票对话框
-const showPurchaseDialog = (schedule) => {
+const showPurchaseDialog = async (schedule) => {
   selectedSchedule.value = schedule;
   purchaseForm.scheduleId = schedule.scheduleId;
   purchaseForm.seatType = ''; // 重置座位类型选择
-  purchaseDialogVisible.value = true;
+  purchaseForm.passengerId = ''; // 重置乘车人选择
   
   // 尝试从本地存储获取用户信息
   const userInfo = localStorage.getItem('user');
@@ -364,12 +377,15 @@ const showPurchaseDialog = (schedule) => {
     try {
       const user = JSON.parse(userInfo);
       purchaseForm.userId = user.id;
-      purchaseForm.passengerName = user.realName || '';
-      purchaseForm.passengerIdCard = user.idCard || '';
     } catch (e) {
       console.error('Failed to parse user info', e);
     }
   }
+  
+  // 加载乘车人列表
+  await loadPassengerList();
+  
+  purchaseDialogVisible.value = true;
 };
 
 // 购买车票
@@ -404,6 +420,61 @@ const purchaseTicket = async () => {
   });
 };
 
+// 获取当前用户ID
+const getCurrentUserId = () => {
+  const userInfo = localStorage.getItem('user');
+  if (userInfo) {
+    try {
+      const user = JSON.parse(userInfo);
+      return user.id;
+    } catch (e) {
+      console.error('Failed to parse user info', e);
+    }
+  }
+  return null;
+};
+
+// 加载乘车人列表
+const loadPassengerList = async () => {
+  try {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      ElMessage.error('请先登录');
+      return;
+    }
+    
+    const result = await passengerApi.getPassengerList(userId);
+    if (result.success) {
+      passengerList.value = result.data || [];
+      
+      // 如果有默认乘车人，自动选择
+      const defaultPassenger = passengerList.value.find(p => p.isDefault);
+      if (defaultPassenger && !purchaseForm.passengerId) {
+        purchaseForm.passengerId = defaultPassenger.id;
+      }
+    } else {
+      ElMessage.error(result.message || '获取乘车人列表失败');
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '获取乘车人列表失败');
+  }
+};
+
+// 乘车人选择变化处理
+const onPassengerChange = (passengerId) => {
+  // 这里可以添加乘车人选择变化后的逻辑
+  console.log('选择的乘车人ID:', passengerId);
+};
+
+// 跳转到乘车人管理页面
+const goToPassengerManagement = () => {
+  router.push('/passengers');
+};
+
+// 组件挂载时加载乘车人列表
+onMounted(() => {
+  loadPassengerList();
+});
 
 </script>
 

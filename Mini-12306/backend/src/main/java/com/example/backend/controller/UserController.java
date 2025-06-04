@@ -5,6 +5,7 @@ import com.example.backend.dto.LoginRequestDTO;
 import com.example.backend.dto.RegisterRequestDTO;
 import com.example.backend.model.User;
 import com.example.backend.service.UserService;
+import com.example.backend.service.impl.UserServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,17 +44,28 @@ public class UserController {
             return ApiResponse.error("用户名和密码不能为空");
         }
         
+        // 检查乘车人信息
+        if (request.getPassengerName() == null || request.getPassengerName().trim().isEmpty() ||
+            request.getPassengerIdCard() == null || request.getPassengerIdCard().trim().isEmpty()) {
+            return ApiResponse.error("乘车人姓名和身份证号不能为空");
+        }
+        
         // 创建用户对象
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(request.getPassword());
-        user.setRealName(request.getRealName());
-        user.setIdCard(request.getIdCard());
         user.setPhone(request.getPhone());
         user.setEmail(request.getEmail());
         
-        // 注册用户
-        String userId = userService.register(user);
+        // 注册用户并创建默认乘车人
+        UserServiceImpl userServiceImpl = (UserServiceImpl) userService;
+        String userId = userServiceImpl.registerWithPassenger(
+            user,
+            request.getPassengerName(),
+            request.getPassengerIdCard(),
+            request.getPassengerPhone()
+        );
+        
         if (userId == null) {
             return ApiResponse.error("用户名已存在");
         }

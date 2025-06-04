@@ -6,7 +6,6 @@ import lombok.Data;
 public class PurchaseRequestDTO {
     private String userId;
     private String scheduleId;
-    private String passengerName;
-    private String passengerIdCard;
-    private String seatType; // e.g., "一等座", "二等座" [cite: 5]
+    private String passengerId; // 乘车人ID
+    private String seatType; // e.g., "一等座", "二等座"
 }

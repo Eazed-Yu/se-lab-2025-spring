@@ -40,6 +40,9 @@ public class TicketServiceImpl implements TicketService {
     private TicketMapper ticketMapper;
     
     @Autowired
+    private PassengerMapper passengerMapper;
+    
+    @Autowired
     private PaymentService paymentService;
 
     @Autowired
@@ -117,8 +120,19 @@ public class TicketServiceImpl implements TicketService {
             throw new RuntimeException("所选车次座位余票不足。");
         }
 
-        // 4. 身份信息核验
-        boolean identityVerified = identityVerificationService.verifyIdentity(request.getPassengerName(), request.getPassengerIdCard());
+        // 4. 查询乘车人信息
+        PassengerEntity passenger = passengerMapper.selectById(request.getPassengerId());
+        if (passenger == null) {
+            throw new IllegalArgumentException("乘车人信息未找到：" + request.getPassengerId());
+        }
+        
+        // 验证乘车人归属
+        if (!passenger.getUserId().equals(request.getUserId())) {
+            throw new RuntimeException("无权使用此乘车人信息。");
+        }
+        
+        // 身份信息核验
+        boolean identityVerified = identityVerificationService.verifyIdentity(passenger.getName(), passenger.getIdCard());
         if (!identityVerified) {
             throw new RuntimeException("身份信息核验失败。");
         }
@@ -145,8 +159,7 @@ public class TicketServiceImpl implements TicketService {
                 .userId(request.getUserId())
                 .orderId(orderId)
                 .scheduleId(request.getScheduleId())
-                .passengerName(request.getPassengerName())
-                .passengerIdCard(request.getPassengerIdCard())
+                .passengerId(request.getPassengerId())
                 .seatTypeId(seatType.getId())
                 .ticketType("成人票") // 简化处理，实际应根据乘客信息确定票种
                 .pricePaid(seatAvailability.getPrice())
@@ -183,7 +196,7 @@ public class TicketServiceImpl implements TicketService {
             orderMapper.updateById(order);
 
             // 构建返回结果
-            TicketDTO ticketDTO = EntityConverter.toTicketDTO(ticket, schedule, seatType);
+            TicketDTO ticketDTO = EntityConverter.toTicketDTO(ticket, schedule, seatType, passenger.getName());
             return EntityConverter.toOrderDTO(order, Collections.singletonList(ticketDTO), "购票成功");
         } else {
             // 8. 支付失败: 更新状态为取消
@@ -311,8 +324,7 @@ public class TicketServiceImpl implements TicketService {
                 .userId(oldTicket.getUserId())
                 .orderId(newOrderId)
                 .scheduleId(request.getNewScheduleId())
-                .passengerName(oldTicket.getPassengerName())
-                .passengerIdCard(oldTicket.getPassengerIdCard())
+                .passengerId(oldTicket.getPassengerId())
                 .seatTypeId(seatType.getId())
                 .ticketType(oldTicket.getTicketType())
                 .pricePaid(newSeatAvailability.getPrice())
@@ -364,8 +376,11 @@ public class TicketServiceImpl implements TicketService {
             newOrder.setUpdateTime(LocalDateTime.now());
             orderMapper.updateById(newOrder);
 
+            // 获取乘车人信息
+            PassengerEntity passenger = passengerMapper.selectById(newTicket.getPassengerId());
+            
             // 构建返回结果
-            TicketDTO newTicketDTO = EntityConverter.toTicketDTO(newTicket, newSchedule, seatType);
+            TicketDTO newTicketDTO = EntityConverter.toTicketDTO(newTicket, newSchedule, seatType, passenger.getName());
             return new ChangeTicketResponseDTO(oldTicket.getId(), newTicket.getId(), "改签成功", newTicketDTO);
         } else {
             // 10. 支付失败: 取消改签
@@ -411,13 +426,22 @@ public class TicketServiceImpl implements TicketService {
         Map<String, TrainScheduleEntity> scheduleMap = schedules.stream()
                 .collect(Collectors.toMap(TrainScheduleEntity::getId, schedule -> schedule));
 
+        // 获取所有相关的乘车人信息
+        Set<String> passengerIds = tickets.stream()
+                .map(TicketEntity::getPassengerId)
+                .collect(Collectors.toSet());
+        List<PassengerEntity> passengers = passengerMapper.selectBatchIds(passengerIds);
+        Map<String, PassengerEntity> passengerMap = passengers.stream()
+                .collect(Collectors.toMap(PassengerEntity::getId, passenger -> passenger));
+
         // 转换为DTO
         return tickets.stream()
                 .map(ticket -> {
                     TrainScheduleEntity schedule = scheduleMap.get(ticket.getScheduleId());
                     SeatTypeEntity seatType = seatTypeMap.get(ticket.getSeatTypeId());
-                    if (schedule != null && seatType != null) {
-                        return EntityConverter.toTicketDTO(ticket, schedule, seatType);
+                    PassengerEntity passenger = passengerMap.get(ticket.getPassengerId());
+                    if (schedule != null && seatType != null && passenger != null) {
+                        return EntityConverter.toTicketDTO(ticket, schedule, seatType, passenger.getName());
                     }
                     return null;
                 })

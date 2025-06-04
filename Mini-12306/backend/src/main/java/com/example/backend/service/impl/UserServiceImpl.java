@@ -2,10 +2,13 @@ package com.example.backend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.backend.mapper.UserMapper;
+import com.example.backend.mapper.PassengerMapper;
 import com.example.backend.model.User;
+import com.example.backend.model.PassengerEntity;
 import com.example.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 
 import java.time.LocalDateTime;
@@ -19,6 +22,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+    
+    @Autowired
+    private PassengerMapper passengerMapper;
 
     /**
      * 根据用户ID查询用户信息
@@ -62,6 +68,7 @@ public class UserServiceImpl implements UserService {
      * 用户注册
      */
     @Override
+    @Transactional
     public String register(User user) {
         // 检查用户名是否已存在
         User existingUser = getUserByUsername(user.getUsername());
@@ -83,6 +90,31 @@ public class UserServiceImpl implements UserService {
         
         // 保存用户
         userMapper.insert(user);
+        
+        return userId;
+    }
+    
+    /**
+     * 用户注册（包含默认乘车人）
+     */
+    @Transactional
+    public String registerWithPassenger(User user, String passengerName, String passengerIdCard, String passengerPhone) {
+        // 先注册用户
+        String userId = register(user);
+        if (userId == null) {
+            return null;
+        }
+        
+        // 创建默认乘车人
+        PassengerEntity passenger = new PassengerEntity(
+            userId,
+            passengerName,
+            passengerIdCard,
+            passengerPhone != null ? passengerPhone : user.getPhone(),
+            true  // 设为默认乘车人
+        );
+        
+        passengerMapper.insert(passenger);
         
         return userId;
     }

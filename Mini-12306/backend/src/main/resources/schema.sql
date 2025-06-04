@@ -9,8 +9,6 @@ CREATE TABLE IF NOT EXISTS `user` (
   `id` varchar(36) NOT NULL COMMENT '用户ID',
   `username` varchar(50) NOT NULL COMMENT '用户名',
   `password` varchar(100) NOT NULL COMMENT '密码',
-  `real_name` varchar(50) DEFAULT NULL COMMENT '真实姓名',
-  `id_card` varchar(18) DEFAULT NULL COMMENT '身份证号',
   `phone` varchar(20) DEFAULT NULL COMMENT '手机号',
   `email` varchar(100) DEFAULT NULL COMMENT '邮箱',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -18,6 +16,24 @@ CREATE TABLE IF NOT EXISTS `user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+
+-- 乘车人表
+CREATE TABLE IF NOT EXISTS `passenger` (
+  `id` varchar(36) NOT NULL COMMENT '乘车人ID',
+  `user_id` varchar(36) NOT NULL COMMENT '用户ID',
+  `name` varchar(50) NOT NULL COMMENT '乘车人姓名',
+  `id_card` varchar(18) NOT NULL COMMENT '身份证号',
+  `phone` varchar(20) NOT NULL COMMENT '手机号',
+  `id_card_photo_path` varchar(500) DEFAULT NULL COMMENT '身份证照片路径',
+  `is_default` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否为默认乘车人',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_id_card` (`user_id`, `id_card`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_id_card` (`id_card`),
+  CONSTRAINT `fk_passenger_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='乘车人表';
 
 -- 列车时刻表
 CREATE TABLE IF NOT EXISTS `train_schedule` (
@@ -85,8 +101,7 @@ CREATE TABLE IF NOT EXISTS `ticket` (
   `user_id` varchar(36) NOT NULL COMMENT '用户ID',
   `order_id` varchar(36) NOT NULL COMMENT '订单ID',
   `schedule_id` varchar(36) NOT NULL COMMENT '时刻表ID',
-  `passenger_name` varchar(50) NOT NULL COMMENT '乘客姓名',
-  `passenger_id_card` varchar(18) NOT NULL COMMENT '乘客身份证号',
+  `passenger_id` varchar(36) NOT NULL COMMENT '乘车人ID',
   `seat_type_id` int NOT NULL COMMENT '座位类型ID',
   `carriage_number` varchar(10) DEFAULT NULL COMMENT '车厢号',
   `seat_number` varchar(20) DEFAULT NULL COMMENT '座位号',
@@ -99,11 +114,12 @@ CREATE TABLE IF NOT EXISTS `ticket` (
   KEY `idx_user_id` (`user_id`),
   KEY `idx_order_id` (`order_id`),
   KEY `idx_schedule_id` (`schedule_id`),
-  KEY `idx_passenger_id_card` (`passenger_id_card`),
+  KEY `idx_passenger_id` (`passenger_id`),
   CONSTRAINT `fk_ticket_order` FOREIGN KEY (`order_id`) REFERENCES `order` (`id`),
   CONSTRAINT `fk_ticket_schedule` FOREIGN KEY (`schedule_id`) REFERENCES `train_schedule` (`id`),
   CONSTRAINT `fk_ticket_seat_type` FOREIGN KEY (`seat_type_id`) REFERENCES `seat_type` (`id`),
-  CONSTRAINT `fk_ticket_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+  CONSTRAINT `fk_ticket_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
+  CONSTRAINT `fk_ticket_passenger` FOREIGN KEY (`passenger_id`) REFERENCES `passenger` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='车票表';
 
 -- 插入初始数据
@@ -115,10 +131,18 @@ INSERT INTO `seat_type` (`code`, `name`, `base_price`) VALUES
 ('BUSINESS_CLASS', '商务座', 1200.00);
 
 -- 用户数据
-INSERT INTO `user` (`id`, `username`, `password`, `real_name`, `id_card`, `phone`, `email`) VALUES
-('u001', 'user1', 'password123', '张三', '110101199001011234', '13800138001', 'zhangsan@example.com'),
-('u002', 'user2', 'password123', '李四', '110101199002022345', '13800138002', 'lisi@example.com'),
-('u003', 'user3', 'password123', '王五', '110101199003033456', '13800138003', 'wangwu@example.com');
+INSERT INTO `user` (`id`, `username`, `password`, `phone`, `email`) VALUES
+('u001', 'user1', 'password123', '13800138001', 'zhangsan@example.com'),
+('u002', 'user2', 'password123', '13800138002', 'lisi@example.com'),
+('u003', 'user3', 'password123', '13800138003', 'wangwu@example.com');
+
+-- 乘车人数据
+INSERT INTO `passenger` (`id`, `user_id`, `name`, `id_card`, `phone`, `is_default`) VALUES
+('p001', 'u001', '张三', '110101199001011234', '13800138001', 1),
+('p002', 'u002', '李四', '110101199002022345', '13800138002', 1),
+('p003', 'u003', '王五', '110101199003033456', '13800138003', 1),
+('p004', 'u001', '张小明', '110101200001011234', '13800138004', 0),
+('p005', 'u002', '李小红', '110101200002022345', '13800138005', 0);
 
 -- 列车时刻表数据
 INSERT INTO `train_schedule` (`id`, `train_number`, `departure_station`, `arrival_station`, `departure_time`, `arrival_time`, `status`) VALUES
@@ -154,7 +178,7 @@ INSERT INTO `order` (`id`, `user_id`, `order_type`, `total_amount`, `payment_sta
 ('o002', 'u002', '购票', 800.00, '支付成功', '已完成', '2025-05-16 14:20:00'),
 ('o003', 'u001', '退票', 500.00, '支付成功', '已完成', '2025-05-17 09:15:00');
 
-INSERT INTO `ticket` (`id`, `user_id`, `order_id`, `schedule_id`, `passenger_name`, `passenger_id_card`, `seat_type_id`, `carriage_number`, `seat_number`, `ticket_type`, `price_paid`, `ticket_status`, `create_time`) VALUES
-('t001', 'u001', 'o001', 'G1234_20250520', '张三', '110101199001011234', 2, '05', '05A', '成人票', 550.00, '已出票', '2025-05-15 10:30:00'),
-('t002', 'u002', 'o002', 'G1235_20250520', '李四', '110101199002022345', 1, '03', '03F', '成人票', 800.00, '已出票', '2025-05-16 14:20:00'),
-('t003', 'u001', 'o003', 'G1001_20250520', '张三', '110101199001011234', 2, '08', '08C', '成人票', 480.00, '已退票', '2025-05-17 09:15:00');
+INSERT INTO `ticket` (`id`, `user_id`, `order_id`, `schedule_id`, `passenger_id`, `seat_type_id`, `carriage_number`, `seat_number`, `ticket_type`, `price_paid`, `ticket_status`, `create_time`) VALUES
+('t001', 'u001', 'o001', 'G1234_20250520', 'p001', 2, '05', '05A', '成人票', 550.00, '已出票', '2025-05-15 10:30:00'),
+('t002', 'u002', 'o002', 'G1235_20250520', 'p002', 1, '03', '03F', '成人票', 800.00, '已出票', '2025-05-16 14:20:00'),
+('t003', 'u001', 'o003', 'G1001_20250520', 'p001', 2, '08', '08C', '成人票', 480.00, '已退票', '2025-05-17 09:15:00');
