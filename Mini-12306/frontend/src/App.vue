@@ -56,12 +56,12 @@ const logout = () => {
         class="app-menu"
         :router="true"
         mode="horizontal"
+        :ellipsis="false"
         :default-active="$route.path"
         background-color="#409EFF"
         text-color="#fff"
         active-text-color="#ffd04b"
       >
-        <!-- 未登录状态显示登录和注册菜单 -->
         <template v-if="!isLoggedIn">
           <el-menu-item index="/login">登录</el-menu-item>
           <el-menu-item index="/register">注册</el-menu-item>
@@ -100,7 +100,6 @@ const logout = () => {
   background-color: #409eff;
   color: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
 }
 
 .logo {
@@ -112,7 +111,7 @@ const logout = () => {
   align-items: center;
 }
 .app-menu {
-  flex-grow: 1;
+  flex: 1;
 }
 
 .app-footer {
@@ -122,9 +121,6 @@ const logout = () => {
   padding: 20px;
 }
 
-:deep(.el-menu.el-menu--horizontal) {
-  border-bottom: none;
-}
 
 :deep(.el-menu--horizontal > .el-menu-item) {
   height: 60px;

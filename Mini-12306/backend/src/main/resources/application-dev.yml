@@ -1,0 +1,6 @@
+spring:
+  ai:
+    openai:
+      api-key: sk-z0Dn2ZlECLDm7WwUp2fboytH3frJ5RExFnENpRVagQAhGa1g
+      embedding:
+        api-key: sk-z0Dn2ZlECLDm7WwUp2fboytH3frJ5RExFnENpRVagQAhGa1g

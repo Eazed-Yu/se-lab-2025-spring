@@ -7,6 +7,18 @@ spring:
     username: ${MYSQL_USERNAME}
     password: ${MYSQL_PASSWORD}
     url:  ${MYSQL_URL}/mini12306
+  ai:
+    openai:
+      api-key: ${spring.ai.openai.api-key}
+      base-url: https://api.bianxie.ai
+      chat:
+        options:
+          model: gpt-4o-mini
+      embedding:
+        base-url: https://api.bianxie.ai
+        api-key: ${spring.ai.openai.embedding.api-key}
+        options:
+          model: text-embedding-3-small
 
 app:
   upload:
