@@ -1,103 +1,178 @@
 <template>
   <div class="search-container">
-    <el-form :model="searchForm" label-width="100px" class="search-form">
-      <el-form-item label="出发站">
-        <el-select v-model="searchForm.departureStation" placeholder="请选择出发站" clearable>
-          <el-option v-for="station in stationList" :key="station" :label="station" :value="station" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="到达站">
-        <el-select v-model="searchForm.arrivalStation" placeholder="请选择到达站" clearable>
-          <el-option v-for="station in stationList" :key="station" :label="station" :value="station" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="出发日期">
-        <el-date-picker
-          v-model="searchForm.departureDate"
-          type="date"
-          placeholder="选择日期"
-          format="YYYY-MM-DD"
-          value-format="YYYY-MM-DD"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="searchSchedules">查询车次</el-button>
-      </el-form-item>
-    </el-form>
-
-    <el-table v-if="schedules.length > 0" :data="schedules" style="width: 100%" stripe>
-      <el-table-column prop="trainNumber" label="车次" />
-      <el-table-column prop="departureStation" label="出发站" />
-      <el-table-column prop="arrivalStation" label="到达站" />
-      <el-table-column label="出发时间">
-        <template #default="scope">
-          {{ formatDateTime(scope.row.departureDateTime) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="到达时间">
-        <template #default="scope">
-          {{ formatDateTime(scope.row.arrivalDateTime) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="历时">
-        <template #default="scope">
-          {{ formatDuration(scope.row.durationMinutes) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="座位">
-        <template #default="scope">
-          <div v-for="(count, type) in scope.row.seatAvailability" :key="type">
-            {{ type }}: {{ count }}张
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="价格">
-        <template #default="scope">
-          <div v-for="(price, type) in scope.row.basePrice" :key="type">
-            {{ type }}: {{ price }}元
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="status" label="状态" />
-      <el-table-column label="操作">
-        <template #default="scope">
-          <el-button size="small" type="primary" @click="showPurchaseDialog(scope.row)">
-            购票
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <div v-else-if="searched" class="no-data">
-      没有找到匹配的车次信息
-    </div>
-
-    <!-- 购票对话框 -->
-    <el-dialog v-model="purchaseDialogVisible" title="购买车票" width="40%">
-      <el-form :model="purchaseForm" label-width="120px">
-        <el-form-item label="用户ID">
-          <el-input v-model="purchaseForm.userId" placeholder="请输入用户ID" />
-        </el-form-item>
-        <el-form-item label="乘客姓名">
-          <el-input v-model="purchaseForm.passengerName" placeholder="请输入乘客姓名" />
-        </el-form-item>
-        <el-form-item label="乘客身份证号">
-          <el-input v-model="purchaseForm.passengerIdCard" placeholder="请输入身份证号" />
-        </el-form-item>
-        <el-form-item label="座位类型">
-          <el-select v-model="purchaseForm.seatType" placeholder="请选择座位类型">
-            <el-option
-              v-for="(_, seatType) in selectedSchedule?.seatAvailability || {}"
-              :key="seatType"
-              :label="seatType"
-              :value="seatType"
-            />
+    <el-card class="search-form-card">
+      <template #header>
+        <div class="card-header">
+          <h3>车票查询</h3>
+        </div>
+      </template>
+      <el-form :model="searchForm" label-width="80px" class="search-form" :inline="true">
+        <el-form-item label="出发站">
+          <el-select v-model="searchForm.departureStation" placeholder="请选择出发站" clearable filterable>
+            <el-option v-for="station in stationList" :key="station" :label="station" :value="station" />
           </el-select>
         </el-form-item>
+        <el-form-item label="到达站">
+          <el-select v-model="searchForm.arrivalStation" placeholder="请选择到达站" clearable filterable>
+            <el-option v-for="station in stationList" :key="station" :label="station" :value="station" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="出发日期">
+          <el-date-picker
+            v-model="searchForm.departureDate"
+            type="date"
+            placeholder="选择日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            :disabled-date="disablePastDates"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="searchSchedules" :loading="loading" :icon="Search">
+            查询车次
+          </el-button>
+        </el-form-item>
       </el-form>
+    </el-card>
+
+    <div v-if="loading" class="loading-container">
+      <el-skeleton :rows="5" animated />
+    </div>
+
+    <el-empty v-else-if="schedules.length === 0 && searched" description="未找到符合条件的车次" />
+
+    <el-card v-else-if="schedules.length > 0" class="schedule-list-card">
+      <template #header>
+        <div class="card-header">
+          <h3>车次信息</h3>
+          <div class="route-info" v-if="searchForm.departureStation && searchForm.arrivalStation">
+            <el-tag size="large">{{ searchForm.departureStation }} → {{ searchForm.arrivalStation }}</el-tag>
+            <el-tag size="large" type="info">{{ searchForm.departureDate }}</el-tag>
+          </div>
+        </div>
+      </template>
+
+      <el-table :data="schedules" style="width: 100%" stripe border>
+        <el-table-column prop="trainNumber" label="车次" width="100" align="center" />
+        <el-table-column label="出发/到达" width="200">
+          <template #default="scope">
+            <div class="station-info">
+              <div class="departure-station">{{ scope.row.departureStation }}</div>
+              <el-divider direction="vertical" />
+              <div class="arrival-station">{{ scope.row.arrivalStation }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="时间" width="280">
+          <template #default="scope">
+            <div class="time-info">
+              <div class="departure-time">{{ formatTime(scope.row.departureDateTime) }}</div>
+              <div class="duration">
+                <el-divider content-position="center">{{ formatDuration(scope.row.durationMinutes) }}</el-divider>
+              </div>
+              <div class="arrival-time">{{ formatTime(scope.row.arrivalDateTime) }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="座位" min-width="200">
+          <template #default="scope">
+            <div class="seat-info">
+              <el-tag 
+                v-for="(count, type) in scope.row.seatAvailability" 
+                :key="type"
+                :type="getSeatTagType(count)"
+                effect="light"
+                class="seat-tag"
+              >
+                {{ type }}: {{ count > 0 ? `${count}张` : '无票' }}
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="价格" width="180">
+          <template #default="scope">
+            <div class="price-info">
+              <div v-for="(price, type) in scope.row.basePrice" :key="type" class="price-item">
+                {{ type }}: <span class="price">¥{{ price }}</span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="scope">
+            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'">
+              {{ scope.row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" align="center" fixed="right">
+          <template #default="scope">
+            <el-button 
+              size="small" 
+              type="primary" 
+              :disabled="scope.row.status !== '正常'"
+              @click="showPurchaseDialog(scope.row)"
+              :icon="Ticket"
+              circle
+              title="购票"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 购票对话框 -->
+    <el-dialog v-model="purchaseDialogVisible" title="购买车票" width="50%" destroy-on-close>
+      <div v-if="selectedSchedule" class="purchase-dialog-content">
+        <el-descriptions title="车次信息" :column="3" border>
+          <el-descriptions-item label="车次">{{ selectedSchedule.trainNumber }}</el-descriptions-item>
+          <el-descriptions-item label="出发站">{{ selectedSchedule.departureStation }}</el-descriptions-item>
+          <el-descriptions-item label="到达站">{{ selectedSchedule.arrivalStation }}</el-descriptions-item>
+          <el-descriptions-item label="出发时间">{{ formatDateTime(selectedSchedule.departureDateTime) }}</el-descriptions-item>
+          <el-descriptions-item label="到达时间">{{ formatDateTime(selectedSchedule.arrivalDateTime) }}</el-descriptions-item>
+          <el-descriptions-item label="历时">{{ formatDuration(selectedSchedule.durationMinutes) }}</el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider content-position="center">乘客信息</el-divider>
+
+        <el-form :model="purchaseForm" label-width="120px" :rules="purchaseRules" ref="purchaseFormRef">
+
+          <el-form-item prop="userId" style="display: none;">
+            <el-input v-model="purchaseForm.userId" type="hidden" />
+          </el-form-item>
+          <el-form-item label="乘客姓名" prop="passengerName">
+            <el-input v-model="purchaseForm.passengerName" placeholder="请输入乘客姓名" />
+          </el-form-item>
+          <el-form-item label="乘客身份证号" prop="passengerIdCard">
+            <el-input v-model="purchaseForm.passengerIdCard" placeholder="请输入身份证号" />
+          </el-form-item>
+          <el-form-item label="座位类型" prop="seatType">
+            <el-select v-model="purchaseForm.seatType" placeholder="请选择座位类型" style="width: 100%">
+              <el-option
+                v-for="(count, seatType) in selectedSchedule.seatAvailability"
+                :key="seatType"
+                :label="`${seatType} (${count}张) - ¥${selectedSchedule.basePrice[seatType]}`"
+                :value="seatType"
+                :disabled="count <= 0"
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+
+        <div v-if="purchaseForm.seatType" class="price-summary">
+          <el-alert
+            :title="`票价: ¥${getSelectedSeatPrice()}`"
+            type="info"
+            :closable="false"
+            show-icon
+          />
+        </div>
+      </div>
+
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="purchaseDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="purchaseTicket">
+          <el-button type="primary" @click="purchaseTicket" :loading="purchaseLoading">
             确认购票
           </el-button>
         </span>
@@ -105,23 +180,39 @@
     </el-dialog>
 
     <!-- 订单成功对话框 -->
-    <el-dialog v-model="orderSuccessDialogVisible" title="购票成功" width="50%">
-      <div v-if="currentOrder">
-        <h3>订单信息</h3>
-        <p>订单编号: {{ currentOrder.orderId }}</p>
-        <p>订单状态: {{ currentOrder.orderStatus }}</p>
-        <p>总金额: {{ currentOrder.totalAmount }}元</p>
-        
-        <h3>车票信息</h3>
-        <el-table :data="currentOrder.tickets" border stripe>
-          <el-table-column prop="ticketId" label="车票编号" />
-          <el-table-column prop="passengerName" label="乘客姓名" />
-          <el-table-column prop="seatType" label="座位类型" />
-          <el-table-column prop="seatNumber" label="座位号" />
-          <el-table-column prop="pricePaid" label="价格" />
-          <el-table-column prop="ticketStatus" label="车票状态" />
-        </el-table>
+    <el-dialog v-model="orderSuccessDialogVisible" title="购票成功" width="60%" destroy-on-close>
+      <div v-if="currentOrder" class="order-success-content">
+        <el-result icon="success" title="购票成功" sub-title="您的订单已成功提交">
+          <template #extra>
+            <el-descriptions title="订单信息" :column="2" border>
+              <el-descriptions-item label="订单编号">{{ currentOrder.orderId }}</el-descriptions-item>
+              <el-descriptions-item label="订单状态">{{ currentOrder.orderStatus }}</el-descriptions-item>
+              <el-descriptions-item label="总金额">¥{{ currentOrder.totalAmount }}</el-descriptions-item>
+              <el-descriptions-item label="创建时间">{{ formatDateTime(currentOrder.createTime) }}</el-descriptions-item>
+            </el-descriptions>
+            
+            <el-divider content-position="center">车票信息</el-divider>
+            
+            <el-table :data="currentOrder.tickets" border stripe>
+              <el-table-column prop="ticketId" label="车票编号" width="180" />
+              <el-table-column prop="passengerName" label="乘客姓名" width="120" />
+              <el-table-column prop="seatType" label="座位类型" width="120" />
+              <el-table-column prop="seatNumber" label="座位号" width="120" />
+              <el-table-column prop="pricePaid" label="价格" width="100">
+                <template #default="scope">
+                  ¥{{ scope.row.pricePaid }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="ticketStatus" label="车票状态" width="120">
+                <template #default="scope">
+                  <el-tag type="success">{{ scope.row.ticketStatus }}</el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </template>
+        </el-result>
       </div>
+      
       <template #footer>
         <span class="dialog-footer">
           <el-button type="primary" @click="orderSuccessDialogVisible = false">
@@ -136,12 +227,25 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { api } from '../api';
+import { Search, Ticket } from '@element-plus/icons-vue';
+import { ticketApi } from '../api';
 
 // 站点列表
 const stationList = [
-  '北京南', '上海虹桥', '武汉', '广州南', '杭州东', '成都东', '重庆北', '北京西', '西安北'
+  '北京南', '上海虹桥', '武汉', '广州南', '杭州东', '成都东', '重庆北', '北京西', '西安北',
+  '南京南', '天津西', '郑州东', '深圳北', '长沙南', '合肥南', '济南西', '青岛北', '厦门北', '福州南'
 ];
+
+// 状态变量
+const loading = ref(false);
+const purchaseLoading = ref(false);
+const schedules = ref([]);
+const searched = ref(false);
+const purchaseDialogVisible = ref(false);
+const orderSuccessDialogVisible = ref(false);
+const selectedSchedule = ref(null);
+const currentOrder = ref(null);
+const purchaseFormRef = ref(null);
 
 // 查询表单数据
 const searchForm = reactive({
@@ -150,21 +254,43 @@ const searchForm = reactive({
   departureDate: new Date().toISOString().split('T')[0] // 默认今天
 });
 
-const schedules = ref([]);
-const searched = ref(false);
-const purchaseDialogVisible = ref(false);
-const orderSuccessDialogVisible = ref(false);
-const currentOrder = ref(null);
-const selectedSchedule = ref(null);
-
 // 购票表单
 const purchaseForm = reactive({
-  userId: 'testUser001',
+  userId: localStorage.getItem('userId') || '',
   scheduleId: '',
   passengerName: '',
   passengerIdCard: '',
   seatType: ''
 });
+
+// 购票表单验证规则
+const purchaseRules = {
+  userId: [
+    { required: true, message: '请输入用户ID', trigger: 'blur' }
+  ],
+  passengerName: [
+    { required: true, message: '请输入乘客姓名', trigger: 'blur' }
+  ],
+  passengerIdCard: [
+    { required: true, message: '请输入身份证号', trigger: 'blur' },
+    { pattern: /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/, message: '请输入正确的身份证号', trigger: 'blur' }
+  ],
+  seatType: [
+    { required: true, message: '请选择座位类型', trigger: 'change' }
+  ]
+};
+
+// 禁用过去的日期
+const disablePastDates = (date) => {
+  return date < new Date(new Date().setHours(0, 0, 0, 0));
+};
+
+// 格式化时间
+const formatTime = (dateTimeString) => {
+  if (!dateTimeString) return '';
+  const date = new Date(dateTimeString);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 // 格式化日期时间
 const formatDateTime = (dateTimeString) => {
@@ -175,31 +301,53 @@ const formatDateTime = (dateTimeString) => {
 
 // 格式化时长
 const formatDuration = (minutes) => {
-  if (!minutes) return '';
+  if (!minutes && minutes !== 0) return '';
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours}小时${mins}分钟`;
 };
 
+// 获取座位标签类型
+const getSeatTagType = (count) => {
+  if (count <= 0) return 'info';
+  if (count < 10) return 'warning';
+  return 'success';
+};
+
+// 获取选中座位的价格
+const getSelectedSeatPrice = () => {
+  if (!selectedSchedule.value || !purchaseForm.seatType) return 0;
+  return selectedSchedule.value.basePrice[purchaseForm.seatType] || 0;
+};
+
 // 查询车次
 const searchSchedules = async () => {
+  // 表单验证
+  if (searchForm.departureStation && searchForm.departureStation === searchForm.arrivalStation) {
+    ElMessage.warning('出发站和到达站不能相同');
+    return;
+  }
+  
+  loading.value = true;
   try {
-    // 添加表单验证
-    if (searchForm.departureStation && searchForm.departureStation === searchForm.arrivalStation) {
-      ElMessage.warning('出发站和到达站不能相同');
-      return;
-    }
+    const result = await ticketApi.querySchedules(searchForm);
     
-    const result = await api.querySchedules(searchForm);
-    // 确保schedules始终是数组
-    schedules.value = Array.isArray(result) ? result : [];
+    if (result.data) {
+      schedules.value = Array.isArray(result.data) ? result.data : [];
+    } else {
+      schedules.value = [];
+    }
     searched.value = true;
     
     if (schedules.value.length === 0) {
       ElMessage.info('未找到符合条件的车次');
     }
   } catch (error) {
-    ElMessage.error(error.error || '查询失败');
+    console.error('查询车次错误:', error);
+    ElMessage.error(error.message || '查询失败，请稍后重试');
+    schedules.value = [];
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -207,57 +355,150 @@ const searchSchedules = async () => {
 const showPurchaseDialog = (schedule) => {
   selectedSchedule.value = schedule;
   purchaseForm.scheduleId = schedule.scheduleId;
+  purchaseForm.seatType = ''; // 重置座位类型选择
   purchaseDialogVisible.value = true;
+  
+  // 尝试从本地存储获取用户信息
+  const userInfo = localStorage.getItem('user');
+  if (userInfo) {
+    try {
+      const user = JSON.parse(userInfo);
+      purchaseForm.userId = user.id;
+      purchaseForm.passengerName = user.realName || '';
+      purchaseForm.passengerIdCard = user.idCard || '';
+    } catch (e) {
+      console.error('Failed to parse user info', e);
+    }
+  }
 };
 
 // 购买车票
 const purchaseTicket = async () => {
-  try {
-    currentOrder.value = await api.buyTicket(purchaseForm);
-    purchaseDialogVisible.value = false;
-    orderSuccessDialogVisible.value = true;
-    // 重新查询最新车票数据
-    searchSchedules();
-  } catch (error) {
-    ElMessage.error(error.error || '购票失败');
-  }
+  if (!purchaseFormRef.value) return;
+  
+  await purchaseFormRef.value.validate(async (valid) => {
+    if (valid) {
+      purchaseLoading.value = true;
+      try {
+        const result = await ticketApi.buyTicket(purchaseForm);
+        
+        if (result.data) {
+          currentOrder.value = result.data;
+          purchaseDialogVisible.value = false;
+          orderSuccessDialogVisible.value = true;
+          
+          localStorage.setItem('userId', purchaseForm.userId);
+          searchSchedules();
+          
+          ElMessage.success('购票成功');
+        } else {
+          ElMessage.warning('购票成功但未返回订单信息');
+        }
+      } catch (error) {
+        console.error('购票错误:', error);
+        ElMessage.error(error.message || '购票失败，请稍后重试');
+      } finally {
+        purchaseLoading.value = false;
+      }
+    }
+  });
 };
 
-onMounted(() => {
-  // 进行一次默认查询
-  searchSchedules();
-});
+
 </script>
 
 <style scoped>
 .search-container {
-  max-width: 1500px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
 }
 
-.search-form {
+.search-form-card {
   margin-bottom: 20px;
-  padding: 20px;
-  border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: space-between;
   align-items: center;
 }
 
-.search-form .el-form-item {
-  margin-right: 20px;
-  margin-bottom: 10px;
+.card-header h3 {
+  margin: 0;
+  color: #409EFF;
 }
 
-.no-data {
-  text-align: center;
+.route-info {
+  display: flex;
+  gap: 10px;
+}
+
+.loading-container {
   padding: 40px;
-  color: #909399;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
-.el-select {
-  width: 200px;
+.station-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.time-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.departure-time, .arrival-time {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.duration {
+  width: 100%;
+  color: #909399;
+  font-size: 12px;
+}
+
+.seat-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.seat-tag {
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+
+.price-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.price-item {
+  font-size: 14px;
+}
+
+.price {
+  font-weight: bold;
+  color: #f56c6c;
+}
+
+.purchase-dialog-content {
+  padding: 20px 0;
+}
+
+.price-summary {
+  margin-top: 20px;
+}
+
+.order-success-content {
+  padding: 20px 0;
 }
 </style>
