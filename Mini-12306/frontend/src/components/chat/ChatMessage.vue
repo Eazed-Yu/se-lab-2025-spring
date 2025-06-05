@@ -66,6 +66,7 @@ import RefundConfirm from './RefundConfirm.vue';
 import UserEditForm from './UserEditForm.vue';
 import PasswordChangeForm from './PasswordChangeForm.vue';
 import AccountSecurity from './AccountSecurity.vue';
+import TicketTableComponent from '../TicketTableComponent.vue';
 
 const props = defineProps({
   message: {
@@ -98,7 +99,8 @@ const getComponentName = (componentType) => {
     'refund_confirm': RefundConfirm,
     'user_edit_form': UserEditForm,
     'password_change_form': PasswordChangeForm,
-    'account_security': AccountSecurity
+    'account_security': AccountSecurity,
+    'ticket_list': TicketTableComponent,
   };
   
   return componentMap[componentType] || 'div';
@@ -183,7 +185,7 @@ const handleComponentAction = (action) => {
 }
 
 .message-content {
-  max-width: 70%;
+  max-width: 100%;
   min-width: 100px;
 }
 

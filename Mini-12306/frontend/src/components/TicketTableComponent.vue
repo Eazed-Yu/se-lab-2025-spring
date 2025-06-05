@@ -185,11 +185,15 @@ import { Ticket } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { passengerApi, ticketApi } from '@/api/index.js'
 
-const { } = defineProps({
-  schedules : Array,
+const { data } = defineProps({
+  data : Object,
 })
+
+const emit = defineEmits(['action']);
+
+
+const schedules = ref(data.schedules || []);
 const purchaseLoading = ref(false);
-const schedules = ref([]);
 const purchaseDialogVisible = ref(false);
 const orderSuccessDialogVisible = ref(false);
 const selectedSchedule = ref(null);
@@ -345,4 +349,83 @@ const getCurrentUserId = () => {
 
 <style scoped>
 
+
+
+.card-header h3 {
+  margin: 0;
+  color: #409EFF;
+}
+
+.route-info {
+  display: flex;
+  gap: 10px;
+}
+
+.loading-container {
+  padding: 40px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.station-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.time-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.departure-time, .arrival-time {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.duration {
+  width: 100%;
+  color: #909399;
+  font-size: 12px;
+}
+
+.seat-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.seat-tag {
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+
+.price-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.price-item {
+  font-size: 14px;
+}
+
+.price {
+  font-weight: bold;
+  color: #f56c6c;
+}
+
+.purchase-dialog-content {
+  padding: 20px 0;
+}
+
+.price-summary {
+  margin-top: 20px;
+}
+
+.order-success-content {
+  padding: 20px 0;
+}
 </style>
