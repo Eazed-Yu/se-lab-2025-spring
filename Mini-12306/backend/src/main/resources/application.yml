@@ -8,7 +8,13 @@ spring:
     password: ${MYSQL_PASSWORD}
     url:  ${MYSQL_URL}/mini12306
     hikari:
-      max-lifetime: 1800000
+      max-lifetime: 600000          # 10分钟（建议值）
+      connection-timeout: 30000     # 连接超时30秒
+      idle-timeout: 300000          # 空闲超时5分钟
+      maximum-pool-size: 10         # 最大连接数
+      minimum-idle: 2               # 最小空闲连接数
+      validation-timeout: 5000      # 验证超时5秒
+      leak-detection-threshold: 60000  # 连接泄漏检测阈值1分钟
   ai:
     openai:
       api-key: ${spring.ai.openai.api-key}
