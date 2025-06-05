@@ -72,6 +72,7 @@ const logout = () => {
           <el-menu-item index="/tickets/search">车票查询与购买</el-menu-item>
           <el-menu-item index="/tickets/user">我的车票与退票</el-menu-item>
           <el-menu-item index="/passengers">乘车人管理</el-menu-item>
+          <el-menu-item index="/chat">智能助手</el-menu-item>
           
           <!-- 用户信息和退出登录 -->
           <div class="user-info">

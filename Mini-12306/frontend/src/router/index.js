@@ -4,6 +4,7 @@ import UserTickets from '../views/UserTickets.vue';
 import Login from '../views/Login.vue';
 import Register from '../views/Register.vue';
 import PassengerManagement from '../views/PassengerManagement.vue';
+import ChatView from '../views/ChatView.vue';
 
 const routes = [
   {
@@ -38,6 +39,12 @@ const routes = [
     path: '/passengers',
     name: 'PassengerManagement',
     component: PassengerManagement,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/chat',
+    name: 'Chat',
+    component: ChatView,
     meta: { requiresAuth: true }
   }
 ];
