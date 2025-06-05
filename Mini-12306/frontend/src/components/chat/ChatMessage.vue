@@ -7,14 +7,18 @@
         <div class="message-time">{{ formatTime(message.timestamp) }}</div>
       </div>
       <div class="message-avatar">
-        <el-avatar :size="32" icon="User" />
+        <el-icon>
+          <Avatar />
+        </el-icon>
       </div>
     </div>
 
     <!-- AI助手消息 -->
     <div v-else-if="message.sender === 'assistant'" class="assistant-message">
       <div class="message-avatar">
-        <el-avatar :size="32" icon="ChatDotRound" />
+        <el-icon>
+          <Avatar />
+        </el-icon>
       </div>
       <div class="message-content">
         <!-- 文本消息 -->
@@ -25,16 +29,27 @@
           </div>
           <div v-else v-html="formatMarkdown(message.content)"></div>
         </div>
-        
+
         <!-- 组件消息 -->
         <div v-else-if="message.type === 'component'" class="message-component">
-          <component 
-            :is="getComponentName(message.componentType)" 
-            :data="message.componentData"
-            @action="handleComponentAction"
-          />
+          <el-collapse v-model="activeCollapse" class="component-collapse">
+            <el-collapse-item name="component" :title="getComponentTitle(message.componentType)">
+              <component
+                :is="getComponentName(message.componentType)"
+                :data="message.componentData"
+                @action="handleComponentAction"
+              />
+            </el-collapse-item>
+          </el-collapse>
         </div>
-        
+
+        <!-- 身份证上传组件 -->
+        <IdCardUpload
+          v-else-if="message.type === 'id_card_upload'"
+          :data="message.data"
+          @action="handleComponentAction"
+        />
+
         <div class="message-time">{{ formatTime(message.timestamp) }}</div>
       </div>
     </div>
@@ -42,7 +57,9 @@
     <!-- 系统消息 -->
     <div v-else class="system-message">
       <div class="system-content">
-        <el-icon><InfoFilled /></el-icon>
+        <el-icon>
+          <InfoFilled />
+        </el-icon>
         <span>{{ message.content }}</span>
       </div>
     </div>
@@ -50,32 +67,36 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { marked } from 'marked';
-import { ElAvatar, ElIcon } from 'element-plus';
-import { User, ChatDotRound, InfoFilled } from '@element-plus/icons-vue';
+import { computed, ref } from 'vue'
+import { marked } from 'marked'
+import { ElAvatar, ElIcon, ElCollapse, ElCollapseItem } from 'element-plus'
+import { UserFilled, InfoFilled, Avatar } from '@element-plus/icons-vue'
 
 // 动态导入组件
-import TrainList from './components/TrainList.vue';
-import TicketForm from './components/TicketForm.vue';
-import PassengerForm from './PassengerForm.vue';
-import PassengerList from './PassengerList.vue';
-import IdCardUpload from './IdCardUpload.vue';
-import ChangeTicketForm from './ChangeTicketForm.vue';
-import RefundConfirm from './RefundConfirm.vue';
-import UserEditForm from './UserEditForm.vue';
-import PasswordChangeForm from './PasswordChangeForm.vue';
-import AccountSecurity from './AccountSecurity.vue';
-import TicketTableComponent from '../TicketTableComponent.vue';
+import TrainList from './components/TrainList.vue'
+import TicketForm from './components/TicketForm.vue'
+import PassengerForm from './components/PassengerForm.vue'
+import PassengerList from './components/PassengerList.vue'
+import IdCardUpload from './components/IdCardUpload.vue'
+import ChangeTicketForm from './ChangeTicketForm.vue'
+import RefundConfirm from './RefundConfirm.vue'
+import UserEditForm from './UserEditForm.vue'
+import PasswordChangeForm from './PasswordChangeForm.vue'
+import AccountSecurity from './AccountSecurity.vue'
+import TicketTableComponent from '@/components/TicketTableComponent.vue'
+import PassengerTableComponent from '../PassengerTableComponent.vue'
 
 const props = defineProps({
   message: {
     type: Object,
-    required: true
-  }
-});
+    required: true,
+  },
+})
 
-const emit = defineEmits(['component-action']);
+const emit = defineEmits(['component-action'])
+
+// 默认展开的折叠面板
+const activeCollapse = ref(['component'])
 
 // 计算消息样式类
 const messageClass = computed(() => {
@@ -83,74 +104,96 @@ const messageClass = computed(() => {
     'user-msg': props.message.sender === 'user',
     'assistant-msg': props.message.sender === 'assistant',
     'system-msg': props.message.sender === 'system',
-    'streaming': props.message.isStreaming
-  };
-});
+    streaming: props.message.isStreaming,
+  }
+})
 
 // 获取组件名称
 const getComponentName = (componentType) => {
   const componentMap = {
-    'train_list': TrainList,
-    'ticket_form': TicketForm,
-    'passenger_form': PassengerForm,
-    'passenger_list': PassengerList,
-    'id_card_upload': IdCardUpload,
-    'change_ticket_form': ChangeTicketForm,
-    'refund_confirm': RefundConfirm,
-    'user_edit_form': UserEditForm,
-    'password_change_form': PasswordChangeForm,
-    'account_security': AccountSecurity,
-    'ticket_list': TicketTableComponent,
-  };
-  
-  return componentMap[componentType] || 'div';
-};
+    train_list: TrainList,
+    ticket_form: TicketForm,
+    passenger_form: PassengerForm,
+    passenger_list: PassengerTableComponent,
+    id_card_upload: IdCardUpload,
+    change_ticket_form: ChangeTicketForm,
+    refund_confirm: RefundConfirm,
+    user_edit_form: UserEditForm,
+    password_change_form: PasswordChangeForm,
+    account_security: AccountSecurity,
+    ticket_list: TicketTableComponent,
+  }
+
+  return componentMap[componentType] || 'div'
+}
+
+// 获取组件标题
+const getComponentTitle = (componentType) => {
+  const titleMap = {
+    train_list: '车次列表',
+    ticket_form: '购票表单',
+    passenger_form: '乘车人表单',
+    passenger_list: '乘车人管理',
+    id_card_upload: '身份证上传',
+    change_ticket_form: '改签表单',
+    refund_confirm: '退票确认',
+    user_edit_form: '用户信息编辑',
+    password_change_form: '密码修改',
+    account_security: '账户安全',
+    ticket_list: '车票管理',
+  }
+
+  return titleMap[componentType] || '组件'
+}
 
 // 格式化时间
 const formatTime = (timestamp) => {
-  if (!timestamp) return '';
-  
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diff = now - date;
-  
+  if (!timestamp) return ''
+
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now - date
+
   // 如果是今天
   if (diff < 24 * 60 * 60 * 1000 && date.getDate() === now.getDate()) {
-    return date.toLocaleTimeString('zh-CN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
-  
+
   // 如果是昨天
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
   if (date.getDate() === yesterday.getDate()) {
-    return '昨天 ' + date.toLocaleTimeString('zh-CN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    return (
+      '昨天 ' +
+      date.toLocaleTimeString('zh-CN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    )
   }
-  
+
   // 其他日期
   return date.toLocaleString('zh-CN', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
-  });
-};
+    minute: '2-digit',
+  })
+}
 
 // 格式化Markdown
 const formatMarkdown = (content) => {
-  if (!content) return '';
-  return marked(content);
-};
+  if (!content) return ''
+  return marked(content)
+}
 
 // 处理组件动作
 const handleComponentAction = (action) => {
-  emit('component-action', action);
-};
+  emit('component-action', action)
+}
 </script>
 
 <style scoped>
@@ -190,19 +233,20 @@ const handleComponentAction = (action) => {
 }
 
 .user-message .message-content {
-  background: #409eff;
-  color: white;
+  background: #ffffff;
+  color: #333333;
   padding: 12px 16px;
   border-radius: 18px 18px 4px 18px;
   word-wrap: break-word;
 }
 
 .assistant-message .message-content {
-  background: #f5f7fa;
-  color: #303133;
+  background: #ffffff;
+  color: #333333;
   padding: 12px 16px;
   border-radius: 18px 18px 18px 4px;
   word-wrap: break-word;
+  border: 1px solid #cccccc;
 }
 
 .message-text {
@@ -213,8 +257,22 @@ const handleComponentAction = (action) => {
   background: white;
   border: 1px solid #e4e7ed;
   border-radius: 8px;
-  padding: 16px;
   margin: 8px 0;
+}
+
+.component-collapse {
+  border: none;
+}
+
+.component-collapse :deep(.el-collapse-item__header) {
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+  padding: 0 16px;
+  font-weight: 500;
+}
+
+.component-collapse :deep(.el-collapse-item__content) {
+  padding: 16px;
 }
 
 .message-time {
@@ -256,10 +314,12 @@ const handleComponentAction = (action) => {
 }
 
 @keyframes blink {
-  0%, 50% {
+  0%,
+  50% {
     opacity: 1;
   }
-  51%, 100% {
+  51%,
+  100% {
     opacity: 0;
   }
 }
@@ -287,14 +347,14 @@ const handleComponentAction = (action) => {
 }
 
 .message-text :deep(code) {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.9);
   padding: 2px 4px;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
 }
 
 .message-text :deep(pre) {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0);
   padding: 8px;
   border-radius: 4px;
   overflow-x: auto;
