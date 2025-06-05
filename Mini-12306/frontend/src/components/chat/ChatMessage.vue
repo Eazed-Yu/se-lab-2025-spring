@@ -42,14 +42,6 @@
             </el-collapse-item>
           </el-collapse>
         </div>
-
-        <!-- 身份证上传组件 -->
-        <IdCardUpload
-          v-else-if="message.type === 'id_card_upload'"
-          :data="message.data"
-          @action="handleComponentAction"
-        />
-
         <div class="message-time">{{ formatTime(message.timestamp) }}</div>
       </div>
     </div>
@@ -85,6 +77,7 @@ import PasswordChangeForm from './PasswordChangeForm.vue'
 import AccountSecurity from './AccountSecurity.vue'
 import TicketTableComponent from '@/components/TicketTableComponent.vue'
 import PassengerTableComponent from '../PassengerTableComponent.vue'
+import UserTicketTableComponent from '../UserTicketTableComponent.vue'
 
 const props = defineProps({
   message: {
@@ -122,6 +115,7 @@ const getComponentName = (componentType) => {
     password_change_form: PasswordChangeForm,
     account_security: AccountSecurity,
     ticket_list: TicketTableComponent,
+    user_tickets: UserTicketTableComponent,
   }
 
   return componentMap[componentType] || 'div'

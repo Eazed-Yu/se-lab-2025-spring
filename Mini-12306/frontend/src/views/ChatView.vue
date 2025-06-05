@@ -479,7 +479,7 @@ watch(
 <style scoped>
 .chat-view {
   display: flex;
-  height: 90vh;
+  height: 80vh;
   background: #f5f7fa;
 }
 
@@ -529,6 +529,7 @@ watch(
 
 .session-item {
   padding: 12px;
+  padding-right: 64px;
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.3s;
@@ -634,7 +635,7 @@ watch(
 }
 
 .input-area {
-  padding: 16px 24px;
+  padding: 16px 24px 0 24px;
   background: white;
   border-top: 1px solid #e4e7ed;
 }

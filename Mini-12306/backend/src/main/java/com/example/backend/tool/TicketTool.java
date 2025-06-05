@@ -1,9 +1,11 @@
 package com.example.backend.tool;
 
+import com.example.backend.dto.TicketDTO;
 import com.example.backend.dto.TrainScheduleDTO;
 import com.example.backend.service.TicketService;
 import com.example.backend.service.ChatSessionService;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -41,7 +43,7 @@ public class TicketTool {
 
             return String.format("为您找到了 %d 趟车次，请在上方列表中选择合适的车次。", schedules.size());
         } catch (Exception e) {
-            return "查询车次信息时出现错误：" + e.getMessage();
+            return "查询车次信息时出现错误：";
         }
     }
 
@@ -58,7 +60,7 @@ public class TicketTool {
 
             return "请填写购票信息：";
         } catch (Exception e) {
-            return "显示购票表单时出现错误：" + e.getMessage();
+            return "显示购票表单时出现错误：";
         }
     }
 
@@ -73,7 +75,7 @@ public class TicketTool {
 
             return "请选择要改签的新车次：";
         } catch (Exception e) {
-            return "显示改签表单时出现错误：" + e.getMessage();
+            return "显示改签表单时出现错误：";
         }
     }
 
@@ -88,7 +90,28 @@ public class TicketTool {
 
             return "请确认退票信息：";
         } catch (Exception e) {
-            return "显示退票确认时出现错误：" + e.getMessage();
+            return "显示退票确认时出现错误：";
+        }
+    }
+
+
+    @Tool(description = "根据用户 ID 查询用户的车票信息，并发送车票列表组件")
+    public String sendUserTickets(String sessionId, String userId) {
+        try {
+            List<TicketDTO> tickets = ticketService.getUserTickets(userId);
+
+            if (tickets.isEmpty()) {
+                return "您还没有购买过车票。";
+            }
+
+            // 发送车票列表组件到前端
+            Map<String, Object> componentData = new HashMap<>();
+            componentData.put("tickets", tickets);
+
+            chatSessionService.sendComponentToSession(sessionId, "user_tickets", componentData);
+            return String.format("找到了 %d 张车票，请在上方列表中操作。", tickets.size());
+        } catch (Exception e) {
+            return "查询车票信息时出现错误：";
         }
     }
 }
