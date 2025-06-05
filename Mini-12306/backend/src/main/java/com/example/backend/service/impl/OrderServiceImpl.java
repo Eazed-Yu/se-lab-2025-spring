@@ -72,7 +72,9 @@ public class OrderServiceImpl implements OrderService {
                 .distinct()
                 .collect(Collectors.toList());
         
-        List<TrainScheduleEntity> schedules = trainScheduleMapper.selectBatchIds(scheduleIds);
+        List<TrainScheduleEntity> schedules = trainScheduleMapper.selectList(
+                new LambdaQueryWrapper<TrainScheduleEntity>().in(TrainScheduleEntity::getId, scheduleIds)
+        );
         Map<String, TrainScheduleEntity> scheduleMap = schedules.stream()
                 .collect(Collectors.toMap(TrainScheduleEntity::getId, schedule -> schedule));
         
@@ -81,7 +83,9 @@ public class OrderServiceImpl implements OrderService {
                 .distinct()
                 .collect(Collectors.toList());
         
-        List<SeatTypeEntity> seatTypes = seatTypeMapper.selectBatchIds(seatTypeIds);
+        List<SeatTypeEntity> seatTypes = seatTypeMapper.selectList(
+                new LambdaQueryWrapper<SeatTypeEntity>().in(SeatTypeEntity::getId, seatTypeIds)
+        );
         Map<Integer, SeatTypeEntity> seatTypeMap = seatTypes.stream()
                 .collect(Collectors.toMap(SeatTypeEntity::getId, seatType -> seatType));
         
@@ -89,7 +93,9 @@ public class OrderServiceImpl implements OrderService {
         List<String> passengerIds = tickets.stream()
                 .map(TicketEntity::getPassengerId)
                 .collect(Collectors.toList());
-        List<PassengerEntity> passengers = passengerMapper.selectBatchIds(passengerIds);
+        List<PassengerEntity> passengers = passengerMapper.selectList(
+                new LambdaQueryWrapper<PassengerEntity>().in(PassengerEntity::getId, passengerIds)
+        );
         Map<String, PassengerEntity> passengerMap = passengers.stream()
                 .collect(Collectors.toMap(PassengerEntity::getId, passenger -> passenger));
         
@@ -142,7 +148,9 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
         
         List<TrainScheduleEntity> schedules = scheduleIds.isEmpty() ? 
-                new ArrayList<>() : trainScheduleMapper.selectBatchIds(scheduleIds);
+                new ArrayList<>() : trainScheduleMapper.selectList(
+                        new LambdaQueryWrapper<TrainScheduleEntity>().in(TrainScheduleEntity::getId, scheduleIds)
+                );
         Map<String, TrainScheduleEntity> scheduleMap = schedules.stream()
                 .collect(Collectors.toMap(TrainScheduleEntity::getId, schedule -> schedule));
         
@@ -152,7 +160,9 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
         
         List<SeatTypeEntity> seatTypes = seatTypeIds.isEmpty() ? 
-                new ArrayList<>() : seatTypeMapper.selectBatchIds(seatTypeIds);
+                new ArrayList<>() : seatTypeMapper.selectList(
+                        new LambdaQueryWrapper<SeatTypeEntity>().in(SeatTypeEntity::getId, seatTypeIds)
+                );
         Map<Integer, SeatTypeEntity> seatTypeMap = seatTypes.stream()
                 .collect(Collectors.toMap(SeatTypeEntity::getId, seatType -> seatType));
         
@@ -161,7 +171,9 @@ public class OrderServiceImpl implements OrderService {
         List<String> allPassengerIds = tickets.stream()
                 .map(TicketEntity::getPassengerId)
                 .collect(Collectors.toList());
-        List<PassengerEntity> allPassengers = passengerMapper.selectBatchIds(allPassengerIds);
+        List<PassengerEntity> allPassengers = passengerMapper.selectList(
+                new LambdaQueryWrapper<PassengerEntity>().in(PassengerEntity::getId, allPassengerIds)
+        );
         Map<String, PassengerEntity> allPassengerMap = allPassengers.stream()
                 .collect(Collectors.toMap(PassengerEntity::getId, passenger -> passenger));
         

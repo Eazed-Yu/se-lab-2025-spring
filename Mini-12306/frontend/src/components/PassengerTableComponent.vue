@@ -162,64 +162,61 @@
     </div>
   </div>
     
-  <!-- 照片上传区域 -->
-  <div v-if="photoDialogVisible" class="photo-upload-section">
-    <div class="form-header">
-      <h3>上传身份证照片</h3>
-      <el-button link @click="photoDialogVisible = false" class="close-btn">
-        <el-icon><Close /></el-icon>
-      </el-button>
-    </div>
-    
-    <div class="photo-upload-container">
-      <el-upload
-        ref="uploadRef"
-        :action="uploadAction"
-        :headers="uploadHeaders"
-        :data="uploadData"
-        :on-success="handleUploadSuccess"
-        :on-error="handleUploadError"
-        :before-upload="beforeUpload"
-        :show-file-list="false"
-        accept="image/*"
-        drag
-      >
-        <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-        <div class="el-upload__text">
-          将文件拖到此处，或<em>点击上传</em>
+  <!-- 照片上传模态窗 -->
+  <el-dialog
+    v-model="photoDialogVisible"
+    title="上传身份证照片"
+    width="500px"
+    :before-close="() => photoDialogVisible = false"
+  >
+    <el-upload
+      ref="uploadRef"
+      :action="uploadAction"
+      :headers="uploadHeaders"
+      :data="uploadData"
+      :on-success="handleUploadSuccess"
+      :on-error="handleUploadError"
+      :before-upload="beforeUpload"
+      :show-file-list="false"
+      accept="image/*"
+      drag
+      class="upload-demo"
+    >
+      <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+      <div class="el-upload__text">
+        将文件拖到此处，或<em>点击上传</em>
+      </div>
+      <template #tip>
+        <div class="el-upload__tip">
+          只能上传jpg/png文件，且不超过2MB
         </div>
-        <template #tip>
-          <div class="el-upload__tip">
-            只能上传jpg/png文件，且不超过2MB
-          </div>
-        </template>
-      </el-upload>
-      
-      <div class="form-footer">
+      </template>
+    </el-upload>
+    
+    <template #footer>
+      <span class="dialog-footer">
         <el-button @click="photoDialogVisible = false">关闭</el-button>
-      </div>
-    </div>
-  </div>
+      </span>
+    </template>
+  </el-dialog>
     
-  <!-- 照片查看区域 -->
-  <div v-if="viewPhotoDialogVisible" class="photo-view-section">
-    <div class="form-header">
-      <h3>身份证照片</h3>
-      <el-button link @click="viewPhotoDialogVisible = false" class="close-btn">
-        <el-icon><Close /></el-icon>
-      </el-button>
+  <!-- 照片查看模态窗 -->
+  <el-dialog
+    v-model="viewPhotoDialogVisible"
+    title="身份证照片"
+    width="600px"
+    :before-close="() => viewPhotoDialogVisible = false"
+  >
+    <div class="photo-viewer">
+      <img :src="currentPhotoUrl" alt="身份证照片" class="photo-display" />
     </div>
     
-    <div class="photo-view-container">
-      <div class="photo-viewer">
-        <img :src="currentPhotoUrl" alt="身份证照片" style="max-width: 100%; max-height: 400px;" />
-      </div>
-      
-      <div class="form-footer">
+    <template #footer>
+      <span class="dialog-footer">
         <el-button @click="viewPhotoDialogVisible = false">关闭</el-button>
-      </div>
-    </div>
-  </div>
+      </span>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -574,9 +571,7 @@ defineExpose({
   justify-content: flex-end;
 }
 
-.passenger-form-section,
-.photo-upload-section,
-.photo-view-section {
+.passenger-form-section {
   margin: 16px 0;
   border: 1px solid #ebeef5;
   border-radius: 4px;
@@ -603,9 +598,7 @@ defineExpose({
   margin-left: auto;
 }
 
-.passenger-form-container,
-.photo-upload-container,
-.photo-view-container {
+.passenger-form-container {
   padding: 20px;
 }
 
@@ -623,8 +616,30 @@ defineExpose({
   margin-bottom: 20px;
 }
 
-.el-upload {
+.photo-display {
+  max-width: 100%;
+  max-height: 500px;
+  border-radius: 4px;
+  border: 1px solid #dcdfe6;
+  object-fit: contain;
+}
+
+.upload-demo {
   width: 100%;
+}
+
+.upload-demo .el-upload {
+  width: 100%;
+}
+
+.upload-demo .el-upload-dragger {
+  width: 100%;
+  height: 180px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .el-upload__tip {

@@ -65,11 +65,6 @@ import { ElAvatar, ElIcon, ElCollapse, ElCollapseItem } from 'element-plus'
 import { UserFilled, InfoFilled, Avatar } from '@element-plus/icons-vue'
 
 // 动态导入组件
-import TrainList from './components/TrainList.vue'
-import TicketForm from './components/TicketForm.vue'
-import PassengerForm from './components/PassengerForm.vue'
-import PassengerList from './components/PassengerList.vue'
-import IdCardUpload from './components/IdCardUpload.vue'
 import ChangeTicketForm from './ChangeTicketForm.vue'
 import RefundConfirm from './RefundConfirm.vue'
 import UserEditForm from './UserEditForm.vue'
@@ -104,16 +99,7 @@ const messageClass = computed(() => {
 // 获取组件名称
 const getComponentName = (componentType) => {
   const componentMap = {
-    train_list: TrainList,
-    ticket_form: TicketForm,
-    passenger_form: PassengerForm,
     passenger_list: PassengerTableComponent,
-    id_card_upload: IdCardUpload,
-    change_ticket_form: ChangeTicketForm,
-    refund_confirm: RefundConfirm,
-    user_edit_form: UserEditForm,
-    password_change_form: PasswordChangeForm,
-    account_security: AccountSecurity,
     ticket_list: TicketTableComponent,
     user_tickets: UserTicketTableComponent,
   }
@@ -124,17 +110,9 @@ const getComponentName = (componentType) => {
 // 获取组件标题
 const getComponentTitle = (componentType) => {
   const titleMap = {
-    train_list: '车次列表',
-    ticket_form: '购票表单',
-    passenger_form: '乘车人表单',
-    passenger_list: '乘车人管理',
-    id_card_upload: '身份证上传',
-    change_ticket_form: '改签表单',
-    refund_confirm: '退票确认',
-    user_edit_form: '用户信息编辑',
-    password_change_form: '密码修改',
-    account_security: '账户安全',
-    ticket_list: '车票管理',
+    user_tickets: '我的车票',
+    passenger_list: '乘车人',
+    ticket_list: '查询车票',
   }
 
   return titleMap[componentType] || '组件'

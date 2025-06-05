@@ -20,8 +20,8 @@ public class PassengerTool {
     @Autowired
     private ChatSessionService chatSessionService;
 
-    @Tool(description = "获取用户的乘车人列表")
-    public String getPassengerList(String sessionId, String userId) {
+    @Tool(description = "向用户发送乘车人列表")
+    public String sendPassengerList(String sessionId, String userId) {
         try {
             List<PassengerDTO> passengers = passengerService.getPassengersByUserId(userId);
             
@@ -41,55 +41,7 @@ public class PassengerTool {
             return "获取乘车人列表时出现错误：" + e.getMessage();
         }
     }
-    
-    @Tool(description = "显示添加乘车人表单")
-    public String showAddPassengerForm(String sessionId) {
-        try {
-            Map<String, Object> componentData = new HashMap<>();
-            componentData.put("action", "add");
-            
-            chatSessionService.sendComponentToSession(sessionId, "passenger_form", componentData);
-            
-            return "请填写乘车人信息：";
-        } catch (Exception e) {
-            return "显示添加乘车人表单时出现错误：" + e.getMessage();
-        }
-    }
-    
-    @Tool(description = "显示编辑乘车人表单")
-    public String showEditPassengerForm(String sessionId, String passengerId) {
-        try {
-            PassengerDTO passenger = passengerService.getPassengerById(passengerId);
-            if (passenger == null) {
-                return "未找到指定的乘车人信息。";
-            }
-            
-            Map<String, Object> componentData = new HashMap<>();
-            componentData.put("action", "edit");
-            componentData.put("passenger", passenger);
-            
-            chatSessionService.sendComponentToSession(sessionId, "passenger_form", componentData);
-            
-            return "请修改乘车人信息：";
-        } catch (Exception e) {
-            return "显示编辑乘车人表单时出现错误：" + e.getMessage();
-        }
-    }
-    
-    @Tool(description = "删除乘车人")
-    public String deletePassenger(String passengerId) {
-        try {
-            boolean success = passengerService.deletePassenger(passengerId);
-            if (success) {
-                return "乘车人删除成功。";
-            } else {
-                return "删除乘车人失败，请检查乘车人ID是否正确。";
-            }
-        } catch (Exception e) {
-            return "删除乘车人时出现错误：" + e.getMessage();
-        }
-    }
-    
+
     @Tool(description = "设置默认乘车人")
     public String setDefaultPassenger(String userId, String passengerId) {
         try {
@@ -104,18 +56,4 @@ public class PassengerTool {
         }
     }
     
-    @Tool(description = "显示身份证上传组件")
-    public String showIdCardUpload(String sessionId, String passengerId) {
-        try {
-            Map<String, Object> componentData = new HashMap<>();
-            componentData.put("passengerId", passengerId);
-            componentData.put("uploadType", "idCard");
-            
-            chatSessionService.sendComponentToSession(sessionId, "file_upload", componentData);
-            
-            return "请上传身份证照片：";
-        } catch (Exception e) {
-            return "显示身份证上传组件时出现错误：" + e.getMessage();
-        }
-    }
 }

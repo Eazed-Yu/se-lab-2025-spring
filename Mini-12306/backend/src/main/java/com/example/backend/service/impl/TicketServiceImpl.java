@@ -17,7 +17,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -422,7 +421,9 @@ public class TicketServiceImpl implements TicketService {
         Set<String> scheduleIds = tickets.stream()
                 .map(TicketEntity::getScheduleId)
                 .collect(Collectors.toSet());
-        List<TrainScheduleEntity> schedules = trainScheduleMapper.selectBatchIds(scheduleIds);
+        List<TrainScheduleEntity> schedules = trainScheduleMapper.selectList(
+                new LambdaQueryWrapper<TrainScheduleEntity>().in(TrainScheduleEntity::getId, scheduleIds)
+        );
         Map<String, TrainScheduleEntity> scheduleMap = schedules.stream()
                 .collect(Collectors.toMap(TrainScheduleEntity::getId, schedule -> schedule));
 
@@ -430,7 +431,9 @@ public class TicketServiceImpl implements TicketService {
         Set<String> passengerIds = tickets.stream()
                 .map(TicketEntity::getPassengerId)
                 .collect(Collectors.toSet());
-        List<PassengerEntity> passengers = passengerMapper.selectBatchIds(passengerIds);
+        List<PassengerEntity> passengers = passengerMapper.selectList(
+                new LambdaQueryWrapper<PassengerEntity>().in(PassengerEntity::getId, passengerIds)
+        );
         Map<String, PassengerEntity> passengerMap = passengers.stream()
                 .collect(Collectors.toMap(PassengerEntity::getId, passenger -> passenger));
 

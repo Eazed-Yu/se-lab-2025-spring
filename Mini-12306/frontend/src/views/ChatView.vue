@@ -107,7 +107,7 @@
             placeholder="请输入您的问题..."
             @keydown.enter.exact="handleEnterKey"
             @keydown.enter.shift.exact.prevent="addNewLine"
-            :disabled="!isConnected || sending"
+            :disabled="!currentUser || sending"
             class="message-input"
           />
           <div class="input-actions">
@@ -121,9 +121,7 @@
             </el-button>
           </div>
         </div>
-        <div class="input-tips">
-          <span>按 Enter 发送，Shift + Enter 换行</span>
-        </div>
+
       </div>
     </div>
   </div>
@@ -171,7 +169,7 @@ const connectionStatus = computed(() => {
 });
 
 const canSend = computed(() => {
-  return inputMessage.value.trim() && isConnected.value && !sending.value && currentSessionId.value;
+  return inputMessage.value.trim() && !sending.value && currentUser.value;
 });
 
 // 方法
@@ -300,6 +298,26 @@ const deleteSession = async (sessionId) => {
 
 const sendMessage = async () => {
   if (!canSend.value) return;
+  
+  // 如果没有当前会话，先创建一个
+  if (!currentSessionId.value) {
+    await createNewSession();
+    if (!currentSessionId.value) {
+      ElMessage.error('创建会话失败，无法发送消息');
+      return;
+    }
+  }
+  
+  // 如果没有连接，尝试连接
+  if (!isConnected.value) {
+    try {
+      await chatWebSocket.connect(currentUser.value.id, currentSessionId.value);
+    } catch (error) {
+      console.error('连接失败:', error);
+      ElMessage.error('连接失败，无法发送消息');
+      return;
+    }
+  }
   
   const message = inputMessage.value.trim();
   inputMessage.value = '';
@@ -650,12 +668,7 @@ watch(
   flex: 1;
 }
 
-.input-tips {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #909399;
-  text-align: center;
-}
+
 
 /* 响应式设计 */
 @media (max-width: 768px) {

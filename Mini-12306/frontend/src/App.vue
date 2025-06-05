@@ -118,7 +118,7 @@ const logout = () => {
 .app-footer {
   text-align: center;
   color: #606266;
-  padding: 20px;
+  padding: 10px;
 }
 
 
