@@ -133,48 +133,49 @@
         </span>
       </div>
       <!-- 订单成功对话框 -->
-      <el-dialog v-model="orderSuccessDialogVisible" title="购票成功" width="60%" destroy-on-close>
-        <div v-if="currentOrder" class="order-success-content">
-          <el-result icon="success" title="购票成功" sub-title="您的订单已成功提交">
-            <template #extra>
-              <el-descriptions title="订单信息" :column="2" border>
-                <el-descriptions-item label="订单编号">{{ currentOrder.orderId }}</el-descriptions-item>
-                <el-descriptions-item label="订单状态">{{ currentOrder.orderStatus }}</el-descriptions-item>
-                <el-descriptions-item label="总金额">¥{{ currentOrder.totalAmount }}</el-descriptions-item>
-                <el-descriptions-item label="创建时间">{{ formatDateTime(currentOrder.createTime) }}</el-descriptions-item>
-              </el-descriptions>
+    </div>
+    <el-dialog v-model="orderSuccessDialogVisible" title="购票成功" width="60%" destroy-on-close>
+      <div v-if="currentOrder" class="order-success-content">
+        <el-result icon="success" title="购票成功" sub-title="您的订单已成功提交">
+          <template #extra>
+            <el-descriptions title="订单信息" :column="2" border>
+              <el-descriptions-item label="订单编号">{{ currentOrder.orderId }}</el-descriptions-item>
+              <el-descriptions-item label="订单状态">{{ currentOrder.orderStatus }}</el-descriptions-item>
+              <el-descriptions-item label="总金额">¥{{ currentOrder.totalAmount }}</el-descriptions-item>
+              <el-descriptions-item label="创建时间">{{ formatDateTime(currentOrder.createTime) }}</el-descriptions-item>
+            </el-descriptions>
 
-              <el-divider content-position="center">车票信息</el-divider>
+            <el-divider content-position="center">车票信息</el-divider>
 
-              <el-table :data="currentOrder.tickets" border stripe>
-                <el-table-column prop="ticketId" label="车票编号" width="180" />
-                <el-table-column prop="passengerName" label="乘客姓名" width="120" />
-                <el-table-column prop="seatType" label="座位类型" width="120" />
-                <el-table-column prop="seatNumber" label="座位号" width="120" />
-                <el-table-column prop="pricePaid" label="价格" width="100">
-                  <template #default="scope">
-                    ¥{{ scope.row.pricePaid }}
-                  </template>
-                </el-table-column>
-                <el-table-column prop="ticketStatus" label="车票状态" width="120">
-                  <template #default="scope">
-                    <el-tag type="success">{{ scope.row.ticketStatus }}</el-tag>
-                  </template>
-                </el-table-column>
-              </el-table>
-            </template>
-          </el-result>
-        </div>
+            <el-table :data="currentOrder.tickets" border stripe>
+              <el-table-column prop="ticketId" label="车票编号" width="180" />
+              <el-table-column prop="passengerName" label="乘客姓名" width="120" />
+              <el-table-column prop="seatType" label="座位类型" width="120" />
+              <el-table-column prop="seatNumber" label="座位号" width="120" />
+              <el-table-column prop="pricePaid" label="价格" width="100">
+                <template #default="scope">
+                  ¥{{ scope.row.pricePaid }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="ticketStatus" label="车票状态" width="120">
+                <template #default="scope">
+                  <el-tag type="success">{{ scope.row.ticketStatus }}</el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </template>
+        </el-result>
+      </div>
 
-        <template #footer>
+      <template #footer>
         <span class="dialog-footer">
           <el-button type="primary" @click="orderSuccessDialogVisible = false">
             确认
           </el-button>
         </span>
-        </template>
-      </el-dialog>
-    </div>
+      </template>
+    </el-dialog>
+
   </div>
 </template>
 
@@ -189,7 +190,6 @@ const { data } = defineProps({
   data : Object,
 })
 
-const emit = defineEmits(['action']);
 
 
 const schedules = ref(data.schedules || []);
@@ -313,11 +313,10 @@ const purchaseTicket = async () => {
 
         if (result.data) {
           currentOrder.value = result.data;
-          purchaseDialogVisible.value = false;
           orderSuccessDialogVisible.value = true;
 
+          purchaseDialogVisible.value = false;
           localStorage.setItem('userId', purchaseForm.userId);
-
           ElMessage.success('购票成功');
         } else {
           ElMessage.warning('购票成功但未返回订单信息');

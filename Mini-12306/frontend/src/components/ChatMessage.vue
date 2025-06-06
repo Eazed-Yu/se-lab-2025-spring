@@ -33,11 +33,10 @@
         <!-- 组件消息 -->
         <div v-else-if="message.type === 'component'" class="message-component">
           <el-collapse v-model="activeCollapse" class="component-collapse">
-            <el-collapse-item name="component" :title="getComponentTitle(message.componentType)">
+            <el-collapse-item name="component" :title="getComponentTitleByName(message.componentType)">
               <component
-                :is="getComponentName(message.componentType)"
+                :is="getComponentByName(message.componentType)"
                 :data="message.componentData"
-                @action="handleComponentAction"
               />
             </el-collapse-item>
           </el-collapse>
@@ -61,18 +60,14 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { marked } from 'marked'
-import { ElAvatar, ElIcon, ElCollapse, ElCollapseItem } from 'element-plus'
-import { UserFilled, InfoFilled, Avatar } from '@element-plus/icons-vue'
+import { ElIcon, ElCollapse, ElCollapseItem } from 'element-plus'
+import { InfoFilled, Avatar } from '@element-plus/icons-vue'
 
-// 动态导入组件
-import ChangeTicketForm from './ChangeTicketForm.vue'
-import RefundConfirm from './RefundConfirm.vue'
-import UserEditForm from './UserEditForm.vue'
-import PasswordChangeForm from './PasswordChangeForm.vue'
-import AccountSecurity from './AccountSecurity.vue'
 import TicketTableComponent from '@/components/TicketTableComponent.vue'
-import PassengerTableComponent from '../PassengerTableComponent.vue'
-import UserTicketTableComponent from '../UserTicketTableComponent.vue'
+import PassengerTableComponent from './PassengerTableComponent.vue'
+import UserTicketTableComponent from './UserTicketTableComponent.vue'
+import CreatePassengerComponent from './CreatePassengerComponent.vue'
+import NotificationComponent from './NotificationComponent.vue'
 
 const props = defineProps({
   message: {
@@ -96,25 +91,26 @@ const messageClass = computed(() => {
   }
 })
 
-// 获取组件名称
-const getComponentName = (componentType) => {
+const getComponentByName = (componentType) => {
   const componentMap = {
     passenger_list: PassengerTableComponent,
     ticket_list: TicketTableComponent,
     user_tickets: UserTicketTableComponent,
+    create_passenger: CreatePassengerComponent,
+    notification: NotificationComponent,
   }
-
   return componentMap[componentType] || 'div'
 }
 
 // 获取组件标题
-const getComponentTitle = (componentType) => {
+const getComponentTitleByName = (componentType) => {
   const titleMap = {
     user_tickets: '我的车票',
     passenger_list: '乘车人',
     ticket_list: '查询车票',
+    create_passenger: '创建乘车人',
+    notification: '通知',
   }
-
   return titleMap[componentType] || '组件'
 }
 
@@ -162,10 +158,7 @@ const formatMarkdown = (content) => {
   return marked(content)
 }
 
-// 处理组件动作
-const handleComponentAction = (action) => {
-  emit('component-action', action)
-}
+
 </script>
 
 <style scoped>

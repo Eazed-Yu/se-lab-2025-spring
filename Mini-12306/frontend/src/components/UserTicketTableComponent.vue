@@ -365,7 +365,6 @@ const { data } = defineProps({
   data: Object,
 })
 
-const emit = defineEmits(['action', 'refresh'])
 
 const tickets = ref(data.tickets || [])
 const changeLoading = ref(false)
@@ -628,7 +627,6 @@ const confirmChange = async () => {
     successDialogVisible.value = true
     
     ElMessage.success('改签成功')
-    emit('refresh')
   } catch (error) {
     console.error('改签错误:', error)
     ElMessage.error(error.message || '改签失败，请稍后重试')
@@ -656,7 +654,7 @@ const confirmRefund = async () => {
     successDialogVisible.value = true
     
     ElMessage.success('退票成功')
-    emit('refresh')
+
   } catch (error) {
     ElMessage.error(error.message || '退票失败，请稍后重试')
   } finally {
@@ -664,11 +662,7 @@ const confirmRefund = async () => {
   }
 }
 
-// 关闭成功对话框
-const closeSuccessDialog = () => {
-  successDialogVisible.value = false
-  emit('refresh')
-}
+
 </script>
 
 <style scoped>

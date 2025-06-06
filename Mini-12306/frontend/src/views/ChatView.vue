@@ -132,7 +132,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElButton, ElIcon, ElTag, ElInput, ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Edit, Delete, Expand, Fold, ChatDotRound } from '@element-plus/icons-vue';
-import ChatMessage from '../components/chat/ChatMessage.vue';
+import ChatMessage from '../components/ChatMessage.vue';
 import { chatWebSocket } from '../api/websocket.js';
 import { chatAPI } from '../api/chat.js';
 

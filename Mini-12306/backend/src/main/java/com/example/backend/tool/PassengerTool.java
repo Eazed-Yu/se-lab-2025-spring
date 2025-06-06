@@ -1,11 +1,14 @@
 package com.example.backend.tool;
 
+import com.example.backend.dto.ApiResponse;
 import com.example.backend.dto.PassengerDTO;
 import com.example.backend.service.PassengerService;
 import com.example.backend.service.ChatSessionService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.HashMap;
 import java.util.List;
@@ -55,5 +58,32 @@ public class PassengerTool {
             return "设置默认乘车人时出现错误：" + e.getMessage();
         }
     }
+
+
+    @Tool(description = "获取乘车人信息")
+    public ResponseEntity<ApiResponse<List<PassengerDTO>>> getPassengers(
+            String userId) {
+        try {
+            List<PassengerDTO> passengers = passengerService.getPassengersByUserId(userId);
+            return ResponseEntity.ok(ApiResponse.success(passengers, "获取乘车人列表成功"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @Tool(description = "向前端发送创建乘车人组件")
+    public String sendCreatePassengerComponent(String sessionId) {
+        try {
+            // 发送创建乘车人组件到前端
+            Map<String, Object> componentData = new HashMap<>();
+
+            chatSessionService.sendComponentToSession(sessionId, "create_passenger", componentData);
+
+            return "成功发送创建乘车人组件";
+        } catch (Exception e) {
+            return "发送创建乘车人组件时出现错误：" + e.getMessage();
+        }
+    }
+
     
 }

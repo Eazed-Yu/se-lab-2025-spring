@@ -229,7 +229,7 @@ const { data } = defineProps({
   data: Object,
 })
 
-const emit = defineEmits(['action'])
+
 
 const passengers = ref(data.passengers || [])
 const loading = ref(false)
@@ -324,7 +324,6 @@ const loadPassengerList = async () => {
     const result = await passengerApi.getPassengerList(userId)
     if (result.success) {
       passengers.value = result.data || []
-      emit('action', { type: 'refresh', data: result.data })
     } else {
       ElMessage.error(result.message || '获取乘车人列表失败')
     }
