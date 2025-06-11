@@ -183,7 +183,8 @@ public class ChatAIServiceImpl implements ChatAIService {
                         "当前会话ID: %s\n" +
                         "\n" +
                         "请根据用户的需求，选择合适的工具来帮助用户完成任务。\n" +
-                        "注意：sessionId参数必须传递当前会话ID: %s \n"+
+                        "注意：sessionId参数必须传递当前会话ID: %s \n" +
+                        "注意回答车票信息的时候要同时回答车次编号和车次ID(scheduleId)"+
                 "当前时间： %s",
                 userId, session.getSessionId(), session.getSessionId(), LocalDateTime.now()
         );

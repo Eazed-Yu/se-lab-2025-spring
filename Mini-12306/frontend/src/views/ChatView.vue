@@ -497,7 +497,7 @@ watch(
 <style scoped>
 .chat-view {
   display: flex;
-  height: 80vh;
+  height: 90vh;
   background: #f5f7fa;
 }
 

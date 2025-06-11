@@ -85,7 +85,7 @@ const logout = () => {
     <el-main>
       <router-view />
     </el-main>
-    <el-footer class="app-footer"> Mini-12306 演示系统 © 2025 </el-footer>
+
   </el-container>
 </template>
 

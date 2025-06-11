@@ -67,7 +67,7 @@ public class TicketTool {
     }
 
 
-    @Tool(description = "购买车票，根据用户提供的乘车人信息和车次信息，向前端发送购票结果")
+    @Tool(description = "购买车票，根据用户提供的乘车人信息和车次信息，向前端发送购票结果.(车次ID是scheduleId)")
     public ApiResponse<?> buyTicket(String sessionId, PurchaseRequestDTO purchaseRequest) {
         try {
             OrderDTO orderDTO = ticketService.purchaseTicket(purchaseRequest);

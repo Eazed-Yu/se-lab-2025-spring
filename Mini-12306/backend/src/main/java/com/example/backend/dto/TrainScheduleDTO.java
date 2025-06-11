@@ -13,8 +13,8 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TrainScheduleDTO {
-    private String scheduleId;
-    private String trainNumber;
+    private String scheduleId; // 车次ID
+    private String trainNumber; // 火车编号
     private String departureStation;
     private String arrivalStation;
     private LocalDateTime departureDateTime;
